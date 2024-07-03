@@ -1,8 +1,6 @@
 ## Sample Client for Amazon Bedrock
 
 <div align="center">
-<img src="./public/logo.png" alt="icon" width="96" height="96" />
-
 
 <h1 align="center">Sample Client for Amazon Bedrock</h1>
 
