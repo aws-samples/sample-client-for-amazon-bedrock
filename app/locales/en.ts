@@ -10,7 +10,7 @@ const en: LocaleType = {
   WIP: "Coming Soon...",
   Error: {
     Unauthorized: isApp
-      ? "Invalid API Key, please check it in [Settings](/#/settings) page."
+      ? "Unauthorized access, please enter confgure your AWS credentials in [auth](/#/auth) page"
       : "Unauthorized access, please enter confgure your AWS credentials in [auth](/#/auth) page",
   },
   Auth: {
