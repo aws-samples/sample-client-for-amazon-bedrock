@@ -1,0 +1,8 @@
+export interface OptionalImportMap {
+}
+export interface SecretMap {
+    ANTHROPIC_API_KEY?: string;
+    OPENAI_API_KEY?: string;
+    PROMPTLAYER_API_KEY?: string;
+    ZAPIER_NLA_API_KEY?: string;
+}

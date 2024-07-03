@@ -1,0 +1,40 @@
+---
+// Since this file will not be bundled by Tsup, it is referencing bundled files relative to dist/astro/
+import type { SpeedInsightsProps } from '../index.d.ts';
+type Props = Omit<SpeedInsightsProps, 'framework' | 'beforeSend'>;
+
+// beforeSend?
+const propsStr = JSON.stringify(Astro.props);
+const paramsStr = JSON.stringify(Astro.params);
+---
+
+<vercel-speed-insights
+  data-props={propsStr}
+  data-params={paramsStr}
+  data-pathname={Astro.url.pathname}></vercel-speed-insights>
+
+<script>
+  import { injectSpeedInsights, computeRoute } from '../index.mjs';
+
+  customElements.define(
+    'vercel-speed-insights',
+    class VercelSpeedInsights extends HTMLElement {
+      constructor() {
+        super();
+        try {
+          const props = JSON.parse(this.dataset.props ?? '{}');
+          const params = JSON.parse(this.dataset.params ?? '{}');
+          const route = computeRoute(this.dataset.pathname ?? '', params);
+          injectSpeedInsights({ 
+            route, 
+            ...props, 
+            framework: 'astro',
+            beforeSend: window.speedInsightsBeforeSend
+          });
+        } catch (err) {
+          throw new Error(`Failed to parse SpeedInsights properties: ${err}`);
+        }
+      }
+    },
+  );
+</script>

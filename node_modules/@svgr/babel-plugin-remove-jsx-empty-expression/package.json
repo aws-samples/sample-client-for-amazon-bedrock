@@ -1,0 +1,40 @@
+{
+  "name": "@svgr/babel-plugin-remove-jsx-empty-expression",
+  "description": "Remove JSX empty expression",
+  "version": "7.0.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "repository": "https://github.com/gregberge/svgr/tree/main/packages/babel-plugin-remove-jsx-empty-expression",
+  "author": "Greg Bergé <berge.greg@gmail.com>",
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "babel-plugin"
+  ],
+  "engines": {
+    "node": ">=14"
+  },
+  "homepage": "https://react-svgr.com",
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/gregberge"
+  },
+  "license": "MIT",
+  "peerDependencies": {
+    "@babel/core": "^7.0.0-0"
+  },
+  "scripts": {
+    "reset": "rm -rf dist",
+    "build": "rollup -c ../../build/rollup.config.mjs",
+    "prepublishOnly": "npm run reset && npm run build"
+  },
+  "gitHead": "3b04a923ae6e0945a9401ad7da7efe26204c8390"
+}

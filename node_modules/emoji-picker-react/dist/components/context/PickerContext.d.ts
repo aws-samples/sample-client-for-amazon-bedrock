@@ -1,0 +1,22 @@
+import * as React from 'react';
+import { DataEmoji } from '../../dataUtils/DataTypes';
+import { FilterDict } from '../../hooks/useFilter';
+import { SkinTones } from '../../types/exposedTypes';
+export declare function PickerContextProvider({ children }: Props): JSX.Element;
+declare type ReactState<T> = [T, React.Dispatch<React.SetStateAction<T>>];
+declare type Props = Readonly<{
+    children: React.ReactNode;
+}>;
+export declare function useFilterRef(): React.MutableRefObject<Record<string, Record<string, DataEmoji>>>;
+export declare function useDisallowClickRef(): React.MutableRefObject<boolean>;
+export declare function useDisallowMouseRef(): React.MutableRefObject<boolean>;
+export declare function useSearchTermState(): [string, (term: string) => Promise<string>];
+export declare function useActiveSkinToneState(): [SkinTones, (skinTone: SkinTones) => void];
+export declare function useEmojisThatFailedToLoadState(): ReactState<Set<string>>;
+export declare function useIsPastInitialLoad(): boolean;
+export declare function useEmojiVariationPickerState(): ReactState<DataEmoji | null>;
+export declare function useSkinToneFanOpenState(): ReactState<boolean>;
+export declare function useDisallowedEmojisRef(): React.MutableRefObject<Record<string, boolean>>;
+export declare function useUpdateSuggested(): [number, () => void];
+export declare type FilterState = Record<string, FilterDict>;
+export {};

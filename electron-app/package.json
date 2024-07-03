@@ -1,0 +1,69 @@
+{
+  "name": "Sample Client for Amazon Bedrock",
+  "version": "1.11.2",
+  "description": "Sample Client for Amazon Bedrock is a cross-platform Bedrock client, including Web/Win/Linux/OSX/PWA.",
+  "main": "main.js",
+  "scripts": {
+    "start": "npm run copy && electron .",
+    "build": "npm run copy && electron-builder",
+    "copy": "cp -r ../out ./"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.11.28",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^29.1.4",
+    "next": "^14.1.3",
+    "typescript": "^5.4.2"
+  },
+  "build": {
+    "appId": "brclient.chat",
+    "productName": "Sample Client for Amazon Bedrock",
+    "copyright": "2024, Damon All Rights Reserved.",
+    "asar": false,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "out/**/*"
+    ],
+    "win": {
+      "icon": "icons/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "icon": "icons/",
+      "target": [
+        "deb",
+        "rpm",
+        "AppImage"
+      ]
+    },
+    "mac": {
+      "icon": "icons/icon.icns",
+      "target": [
+        "dmg"
+      ]
+    }
+  },
+  "dependencies": {
+    "electron-is-dev": "^3.0.1",
+    "sass": "^1.72.0"
+  }
+}

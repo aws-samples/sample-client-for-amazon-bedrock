@@ -1,0 +1,28 @@
+export type IterableReadableStreamInterface<T> = ReadableStream<T> & AsyncIterable<T>;
+export declare class IterableReadableStream<T> extends ReadableStream<T> implements IterableReadableStreamInterface<T> {
+    reader: ReadableStreamDefaultReader<T>;
+    ensureReader(): void;
+    next(): Promise<IteratorResult<T>>;
+    return(): Promise<IteratorResult<T>>;
+    throw(e: any): Promise<IteratorResult<T>>;
+    [Symbol.asyncIterator](): this;
+    static fromReadableStream<T>(stream: ReadableStream<T>): IterableReadableStream<T>;
+    static fromAsyncGenerator<T>(generator: AsyncGenerator<T>): IterableReadableStream<T>;
+}
+export declare function atee<T>(iter: AsyncGenerator<T>, length?: number): AsyncGenerator<T>[];
+export declare function concat<T extends Array<any> | string | number | Record<string, any> | any>(first: T, second: T): T;
+export declare class AsyncGeneratorWithSetup<S = unknown, T = unknown, TReturn = unknown, TNext = unknown> implements AsyncGenerator<T, TReturn, TNext> {
+    private generator;
+    setup: Promise<S>;
+    private firstResult;
+    private firstResultUsed;
+    constructor(generator: AsyncGenerator<T>, startSetup?: () => Promise<S>);
+    next(...args: [] | [TNext]): Promise<IteratorResult<T>>;
+    return(value: TReturn | PromiseLike<TReturn>): Promise<IteratorResult<T>>;
+    throw(e: Error): Promise<IteratorResult<T>>;
+    [Symbol.asyncIterator](): this;
+}
+export declare function pipeGeneratorWithSetup<S, A extends unknown[], T, TReturn, TNext, U, UReturn, UNext>(to: (g: AsyncGenerator<T, TReturn, TNext>, s: S, ...args: A) => AsyncGenerator<U, UReturn, UNext>, generator: AsyncGenerator<T, TReturn, TNext>, startSetup: () => Promise<S>, ...args: A): Promise<{
+    output: AsyncGenerator<U, UReturn, UNext>;
+    setup: Awaited<S>;
+}>;
