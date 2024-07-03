@@ -33,7 +33,7 @@ The Mac App files were signed by a community contributor for your convenience. T
 ## Download links:
 
 ### Windows:
-coming soon！
+https://github.com/aws-samples/BRClient/releases/download/v1.11.8/brclient_windows.zip
 
 ### Mac M Series:
 coming soon！
@@ -56,7 +56,7 @@ After the client was launched, click the gear icon to config your AWS region and
 
 As the project is still in rapid itelating, we would like to suggest developers to build it their own version following the following steps:
 
-1. git clone current project: `git clone https://github.com/DamonDeng/BRClient.git`
+1. git clone current project: `git clone https://github.com/aws-samples/sample-client-for-amazon-bedrock.git`
 2. install yarn on your desktop
 3. go to the project folder
 4. run `yarn install` to install all the dependences of the project

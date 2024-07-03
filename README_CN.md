@@ -31,15 +31,17 @@ Mac用户解压下载的zip文件后直接打开 BRClient.app 使用。
 Download links:
 
 Windows:
-https://github.com/aws-samples/BRClient/releases/download/v1.11.8/brclient_windows.zip
-
+coming soon！
 
 Mac M 系列:
-https://github.com/aws-samples/BRClient/releases/download/v1.11.8/brclient_m_series.zip
-
+coming soon！
 
 Mac x86 系列:
-https://github.com/aws-samples/BRClient/releases/download/v1.11.8/brclient_x86_mac.zip
+coming soon！
+
+iOS 系列:
+
+coming soon！
 
 
 打开程序以后在“配置”界面配置AWS Region, AK/SK 就可以开始使用。
@@ -48,7 +50,7 @@ https://github.com/aws-samples/BRClient/releases/download/v1.11.8/brclient_x86_m
 
 目前项目还在快速开发阶段，所以建议使用开发者模式:
 
-1. 使用git克隆当前项目: `git clone https://github.com/aws-samples/BRClient.git`
+1. 使用git克隆当前项目: `git clone https://github.com/aws-samples/sample-client-for-amazon-bedrock.git`
 2. 安装yarn
 3. 进入项目文件夹
 4. 运行 `yarn install`安装依赖包
@@ -95,5 +97,4 @@ https://github.com/aws-samples/BRClient/releases/download/v1.11.8/brclient_x86_m
 ## 开源协议
 
 本项目使用 MIT-0 开源协议. 请阅读 LICENSE 文件.
-
 
