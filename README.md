@@ -30,21 +30,21 @@ For Mac user, unzip the zip file and then open the BRClient.app directly.
 
 The Mac App files were signed by a community contributor for your convenience. The signer reserves all rights to the signature, and the signed files are not covered by the open-source licenses of this project.
 
-# Download links:
+## Download links:
 
-# Windows:
+### Windows:
 coming soon！
 
-# Mac M Series:
+### Mac M Series:
 coming soon！
 
-# Mac x86 Series:
+### Mac x86 Series:
 coming soon！
 
-# Android:
+### Android:
 coming soon！
 
-# iOS:
+### iOS:
 coming soon!
 
 
