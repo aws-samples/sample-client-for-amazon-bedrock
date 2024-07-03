@@ -33,7 +33,7 @@ The Mac App files were signed by a community contributor for your convenience. T
 ## Download links:
 
 ### Windows:
-https://github.com/aws-samples/BRClient/releases/download/v1.11.8/brclient_windows.zip
+coming soon！
 
 ### Mac M Series:
 coming soon！
