@@ -1,7 +1,7 @@
 name: "publish"
 
 on:
-  # workflow_dispatch: # 允许手动触发
+  workflow_dispatch: # 允许手动触发
   push:
     branches:
       'release/**'
