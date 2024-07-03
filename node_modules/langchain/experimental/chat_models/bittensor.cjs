@@ -1,1 +1,0 @@
-module.exports = require('../../dist/experimental/chat_models/bittensor.cjs');

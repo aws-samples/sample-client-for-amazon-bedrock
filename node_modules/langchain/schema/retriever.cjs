@@ -1,1 +1,0 @@
-module.exports = require('../dist/schema/retriever.cjs');

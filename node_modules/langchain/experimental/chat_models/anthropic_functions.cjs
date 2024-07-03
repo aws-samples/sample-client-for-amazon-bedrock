@@ -1,1 +1,0 @@
-module.exports = require('../../dist/experimental/chat_models/anthropic_functions.cjs');

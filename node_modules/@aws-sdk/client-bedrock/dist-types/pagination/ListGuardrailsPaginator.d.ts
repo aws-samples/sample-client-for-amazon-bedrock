@@ -1,7 +1,0 @@
-import { Paginator } from "@smithy/types";
-import { ListGuardrailsCommandInput, ListGuardrailsCommandOutput } from "../commands/ListGuardrailsCommand";
-import { BedrockPaginationConfiguration } from "./Interfaces";
-/**
- * @public
- */
-export declare const paginateListGuardrails: (config: BedrockPaginationConfiguration, input: ListGuardrailsCommandInput, ...rest: any[]) => Paginator<ListGuardrailsCommandOutput>;
