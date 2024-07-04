@@ -12,7 +12,7 @@ const cn = {
   },
   Auth: {
     Title: "需要AWS认证信息",
-    Tips: "Please enter AWS region, acess key and secret key below",
+    Tips: "Please enter AWS region, Access key and Secret key below",
     SubTips: "或者输入你的BRConnector API 密钥",
     Input: "access key",
     Confirm: "确认",

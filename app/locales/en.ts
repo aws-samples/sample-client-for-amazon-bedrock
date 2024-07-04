@@ -15,7 +15,7 @@ const en: LocaleType = {
   },
   Auth: {
     Title: "Need AWS credentials",
-    Tips: "Please enter AWS region, acess key and secret key below",
+    Tips: "Please enter AWS region, Access key and Secret key below",
     SubTips: "Or enter your BRConnector API Key",
     Input: "access key",
     Confirm: "Confirm",
