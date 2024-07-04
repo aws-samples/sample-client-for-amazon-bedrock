@@ -25,12 +25,14 @@ export function AuthPage() {
     });
   }; // Reset access code to empty string
 
-  useEffect(() => {
-    if (getClientConfig()?.isApp) {
-      navigate(Path.Settings);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  //console.log("isApp")
+  //console.log(getClientConfig()?.isApp)
+  //useEffect(() => {
+  //  if (getClientConfig()?.isApp) {
+  //    navigate(Path.Settings);
+  //  }
+  //  // eslint-disable-next-line react-hooks/exhaustive-deps
+  //}, []);
 
   return (
     <div className={styles["auth-page"]}>
