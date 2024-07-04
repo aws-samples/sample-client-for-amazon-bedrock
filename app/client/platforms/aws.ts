@@ -8,7 +8,7 @@ import {
   // ServiceProvider,
 } from "@/app/constant";
 import { useAccessStore, useAppConfig, useChatStore } from "@/app/store";
-import {ConverseCommandInput} from "@aws-sdk/client-bedrock-runtime"; 
+import { ConverseCommandInput } from "@aws-sdk/client-bedrock-runtime";
 import { BedrockClient, AWSConfig } from "@/app/client/platforms/aws_utils";
 import Locale from "../../locales";
 import {
@@ -108,6 +108,8 @@ export class ClaudeApi implements LLMApi {
     var system_prompt = "";
     var prev_role = "";
 
+
+
     for (var i = 0; i < messages.length; i++) {
       if (messages[i].role === "system") {
         if (has_system_prompt) {
@@ -156,8 +158,8 @@ export class ClaudeApi implements LLMApi {
           new_contents.push(text_playload);
         } else {
           for (var j = 0; j < messages[i].content.length; j++) {
-           
-            
+
+
             if (
               (messages[i].content[j] as MultimodalContent).type === "image_url"
             ) {
@@ -173,33 +175,33 @@ export class ClaudeApi implements LLMApi {
                 const image_metadata = image_data_in_string.split(",")[0];
                 const image_data = image_data_in_string.split(",")[1];
                 const media_type = image_metadata.split(";")[0].split(":")[1];
-  
+
                 // converse image block , use bytes reaplace base64
                 const image_playload = {
-                  "image":{
-                    "format":media_type.split("/")[1],
-                    "source":{
-                      "bytes":Uint8Array.from(atob(image_data), c => c.charCodeAt(0))
+                  "image": {
+                    "format": media_type.split("/")[1],
+                    "source": {
+                      "bytes": Uint8Array.from(atob(image_data), c => c.charCodeAt(0))
                     }
                   }
                 };
 
                 new_contents.push(image_playload);
               }
-            }else if (
+            } else if (
               (messages[i].content[j] as MultimodalContent).type === "doc"
             ) {
-             console.log("have doc !!!!",(messages[i].content[j] as MultimodalContent).doc?.name)
+              console.log("have doc !!!!", (messages[i].content[j] as MultimodalContent).doc?.name)
 
-             // converse image block , use bytes reaplace base64
-             const doc_playload = {
-              "document":(messages[i].content[j] as MultimodalContent).doc
-            };
+              // converse image block , use bytes reaplace base64
+              const doc_playload = {
+                "document": (messages[i].content[j] as MultimodalContent).doc
+              };
 
-            new_contents.push(doc_playload);
+              new_contents.push(doc_playload);
 
             }
-            
+
             else {
               const content_string =
                 messages[i].content[j] == "" ? "' '" : messages[i].content[j];
@@ -256,6 +258,16 @@ export class ClaudeApi implements LLMApi {
         prev_role = messages[i].role;
       }
     }
+
+    /* 如果因为某些原因传入进来的消息第一条是assistant，加上一个空的user role,  :< ! */
+    if (new_messages.length > 0 && new_messages[0].role === "assistant") {
+      new_messages.unshift({
+        role: "user", content: [
+          { type: 'text', text: 'hi' }]
+      });
+    }
+
+    console.log("messages[0].role", messages[0].role)
 
     const requestPayload = {
       ...(has_system_prompt ? { system: system_prompt } : {}),
@@ -359,9 +371,9 @@ export class ClaudeApi implements LLMApi {
 
       //let metrics = null;
       let metrics: any = {};
-      
+
       if (shouldStream) {
-      console.log("streaming");
+        console.log("streaming");
         let responseText = "";
         let remainText = "";
         let finished = false;
@@ -397,56 +409,58 @@ export class ClaudeApi implements LLMApi {
 
         controller.signal.onabort = finish;
 
-        const payload: ConverseCommandInput={
+        const payload: ConverseCommandInput = {
           modelId: modelID,
           messages: requestPayload.messages,
-          inferenceConfig: { 
-            maxTokens: requestPayload.max_tokens, 
-            temperature: requestPayload.temperature, 
-            topP: requestPayload.top_p }
+          inferenceConfig: {
+            maxTokens: requestPayload.max_tokens,
+            temperature: requestPayload.temperature,
+            topP: requestPayload.top_p
+          }
         }
-        const response = await client.converseStream( payload);
+        const response = await client.converseStream(payload);
 
         try {
           // Send the command to the model and wait for the response
           // Extract and print the streamed response text in real-time.
           let result = ""
-          for await (const item of response.stream??[]) {
+          for await (const item of response.stream ?? []) {
             if (item.contentBlockDelta) {
               //console.log(item.contentBlockDelta.delta?.text);
-              remainText +=item.contentBlockDelta.delta?.text
+              remainText += item.contentBlockDelta.delta?.text
             }
           }
-          console.log("result:",remainText)
+          console.log("result:", remainText)
           finish()
         } catch (err) {
           finish()
           console.log(`ERROR: Can't invoke '${modelID}'. Reason: ${err}`);
         }
 
-        
+
       } else {
         console.log("not streaming");
 
-        const payload: ConverseCommandInput={
+        const payload: ConverseCommandInput = {
           modelId: modelID,
           messages: requestPayload.messages,
-          inferenceConfig: { 
-            maxTokens: requestPayload.max_tokens, 
-            temperature: requestPayload.temperature, 
-            topP: requestPayload.top_p }
+          inferenceConfig: {
+            maxTokens: requestPayload.max_tokens,
+            temperature: requestPayload.temperature,
+            topP: requestPayload.top_p
+          }
         }
 
         const res = await client.converseModel(payload)
         clearTimeout(requestTimeoutId);
-        
-      let message = "No message return";
-       if (res.output?.message?.content) {
-        message = res.output.message.content[0]["text"]??"";
-       }
-       if (res.usage){
-        metrics = res.usage;
-       }
+
+        let message = "No message return";
+        if (res.output?.message?.content) {
+          message = res.output.message.content[0]["text"] ?? "";
+        }
+        if (res.usage) {
+          metrics = res.usage;
+        }
         options.onFinish(message, metrics);
       }
     } catch (e) {
