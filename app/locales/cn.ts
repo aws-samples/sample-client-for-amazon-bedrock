@@ -7,7 +7,7 @@ const cn = {
   WIP: "该功能仍在开发中……",
   Error: {
     Unauthorized: isApp
-      ? "检测到无效 API Key，请前往[设置](/#/settings)页检查 API Key 是否配置正确。"
+      ? "认证信息不正确或为空，请前往[登录](/#/auth)页输入正确的AWS认证信息"
       : "认证信息不正确或为空，请前往[登录](/#/auth)页输入正确的AWS认证信息",
   },
   Auth: {
