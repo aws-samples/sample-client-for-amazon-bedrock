@@ -33,13 +33,16 @@ The Mac App files were signed by a community contributor for your convenience. T
 ## Download links:
 
 ### Windows:
-coming soon！
+https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.1/Sample.Client.for.Amazon.Bedrock_1.2.1_x64_en-US.msi.zip
 
 ### Mac M Series:
-coming soon！
+https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.1/Sample.Client.for.Amazon.Bedrock_aarch64.app.tar.gz
 
 ### Mac x86 Series:
-coming soon！
+https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.1/Sample.Client.for.Amazon.Bedrock_x64.app.tar.gz
+
+### Linux:
+https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.1/sample-client-for-amazon-bedrock_1.2.1_amd64.AppImage.tar.gz
 
 ### Android:
 coming soon！
