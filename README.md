@@ -34,7 +34,7 @@ The Mac App files were signed by a community contributor for your convenience. T
 
 ### Windows:
 https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.1/Sample.Client.for.Amazon.Bedrock_1.2.1_x64-setup.exe
-```
+
 https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.1/Sample.Client.for.Amazon.Bedrock_1.2.1_x64_en-US.msi.zip
 
 ### Mac M Series:
