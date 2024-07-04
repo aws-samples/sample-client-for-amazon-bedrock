@@ -16,12 +16,19 @@ export type MessageRole = (typeof ROLES)[number];
 export const Models = ["gpt-3.5-turbo", "gpt-4"] as const;
 export type ChatModel = ModelType;
 
+export interface AttachmentDocument {
+  name:string;
+  format:string;
+  size?:number;
+  source:{"bytes":Uint8Array};
+}
 export interface MultimodalContent {
-  type: "text" | "image_url";
+  type: "text" | "image_url"|"doc";
   text?: string;
   image_url?: {
     url: string;
   };
+  doc?: AttachmentDocument
 }
 
 export interface RequestMessage {

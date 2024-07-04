@@ -156,6 +156,8 @@ export class ClaudeApi implements LLMApi {
           new_contents.push(text_playload);
         } else {
           for (var j = 0; j < messages[i].content.length; j++) {
+           
+            
             if (
               (messages[i].content[j] as MultimodalContent).type === "image_url"
             ) {
@@ -184,7 +186,21 @@ export class ClaudeApi implements LLMApi {
 
                 new_contents.push(image_playload);
               }
-            } else {
+            }else if (
+              (messages[i].content[j] as MultimodalContent).type === "doc"
+            ) {
+             console.log("have doc !!!!",(messages[i].content[j] as MultimodalContent).doc?.name)
+
+             // converse image block , use bytes reaplace base64
+             const doc_playload = {
+              "document":(messages[i].content[j] as MultimodalContent).doc
+            };
+
+            new_contents.push(doc_playload);
+
+            }
+            
+            else {
               const content_string =
                 messages[i].content[j] == "" ? "' '" : messages[i].content[j];
               new_contents.push(content_string);

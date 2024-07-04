@@ -11,6 +11,8 @@ import React, {
 } from "react";
 
 import {
+  calculateSHA1,
+  checkFileExtension,
   readFromFile,
 } from "../utils";
 
@@ -69,6 +71,7 @@ import {
   compressImage,
   extractTextFromDocx,
   extractTextFromXlsx,
+  readFileAsBytes,
 } from "../utils";
 
 import dynamic from "next/dynamic";
@@ -105,9 +108,9 @@ import { prettyObject } from "../utils/format";
 import { ExportMessageModal } from "./exporter";
 import { getClientConfig } from "../config/client";
 import { useAllModels } from "../utils/hooks";
-import { MultimodalContent } from "../client/api";
+import { AttachmentDocument, MultimodalContent } from "../client/api";
 
-import { pdfToText, readTXTFile } from "../utils";
+
 
 const Markdown = dynamic(async () => (await import("./markdown")).Markdown, {
   loading: () => <LoadingIcon />,
@@ -337,64 +340,101 @@ interface UploadDocumentProps {
   size: number;
 }
 
+
+
+
 export function DocumentsList(props: {
   showDocumentsList: boolean;
-  onDocumentSelect: (file: string) => void;
+  onDocumentBytesSelect: (data: any) => void;
   files: UploadDocumentProps[];
   setFiles: React.Dispatch<React.SetStateAction<UploadDocumentProps[]>>;
 }) {
-  //const [files, setFiles] = useState<UploadDocumentProps[]>([]);
-  const [selectedId, setSelectedId] = useState("");
-
+ 
+  const [showMessage, setShowMessage]=useState(false)
+  const [message, setMessage]=useState("")
+  
   async function localLoadDocument() {
     const files: string[] = [];
-
+    //pdf | csv | doc | docx | xls | xlsx | html | txt | md
     files.push(
       ...(await new Promise<string[]>((res, rej) => {
         const fileInput = document.createElement("input");
         fileInput.type = "file";
-        fileInput.accept = "application/pdf,.csv,.txt,.md,.docx,.xlsx";
-        fileInput.multiple = true;
+        fileInput.accept = "application/pdf,.csv,.txt,.md,.docx,doc,.xlsx,xls,";
+        fileInput.multiple = false;
         fileInput.onchange = (event: any) => {
           const files = event.target.files;
           const fileExtension = files[0].name.split(".").pop()?.toLowerCase();
-          if (fileExtension === "pdf") {
-            pdfToText(files[0])
-              .then((text) => {
-                props.onDocumentSelect(text ?? "");
+          const fileName = files[0].name.split(".")[0].replace(" ","")
+          if (checkFileExtension(fileExtension)){
+            readFileAsBytes(files[0]).then((data) => {
+              /*原生的doc 功能 name 不支持全角字符，比如 公司季度财务报表（2024）.xlsx,所以改为计算sha1作为文件名 */
+              console.log(`fileName: ${fileName}, format: ${fileExtension}, size :${files[0].size}`);
+              calculateSHA1(fileName)
+              .then(sha1Hash => {
+                const doc = {
+                  name: sha1Hash,
+                  format: fileExtension,
+                  size: files[0].size,
+                  source: { "bytes": data }
+                }
+                props.onDocumentBytesSelect(doc)
                 props.setFiles([{ file: files[0].name, size: files[0].size }]);
               })
-              .catch((error) =>
-                console.error("Failed to extract text from pdf"),
-              );
-          } else if (fileExtension === "docx") {
-            extractTextFromDocx(files[0])
-              .then((text) => {
-                props.onDocumentSelect(text ?? "");
-                props.setFiles([{ file: files[0].name, size: files[0].size }]);
-              })
-              .catch((error) =>
-                console.error("Failed to extract text from pdf"),
-              );
-          } else if (fileExtension === "xlsx") {
-            extractTextFromXlsx(files[0])
-              .then((text) => {
-                props.onDocumentSelect(text ?? "");
-                props.setFiles([{ file: files[0].name, size: files[0].size }]);
-              })
-              .catch((error) =>
-                console.error("Failed to extract text from pdf"),
-              );
-          } else {
-            readTXTFile(files[0])
-              .then((text) => {
-                props.onDocumentSelect(text ?? "");
-                props.setFiles([{ file: files[0].name, size: files[0].size }]);
-              })
-              .catch((error) =>
-                console.error("Failed to extract text from pdf"),
-              );
+              .catch(error => console.error(error));
+  
+            }).catch((error) =>
+              console.error(`Failed to read ${files[0]},${error}`),
+            );
+          }else{
+            setShowMessage(true)
+            setMessage(`${files[0].name}, [${fileExtension}] type not supported`)
+
+            setTimeout(()=>{
+              setShowMessage(false)
+              setMessage("")
+            },3000)
           }
+          
+
+          /*remove text extract use native document block*/
+          // if (fileExtension === "pdf") {
+          //   pdfToText(files[0])
+          //     .then((text) => {
+          //       props.onDocumentSelect(text ?? "");
+          //       props.setFiles([{ file: files[0].name, size: files[0].size }]);
+          //     })
+          //     .catch((error) =>
+          //       console.error("Failed to extract text from pdf"),
+          //     );
+          // } else if (fileExtension === "docx") {
+          //   extractTextFromDocx(files[0])
+          //     .then((text) => {
+          //       props.onDocumentSelect(text ?? "");
+          //       props.setFiles([{ file: files[0].name, size: files[0].size }]);
+          //     })
+          //     .catch((error) =>
+          //       console.error("Failed to extract text from pdf"),
+          //     );
+          // } else if (fileExtension === "xlsx") {
+          //   extractTextFromXlsx(files[0])
+          //     .then((text) => {
+          //       props.onDocumentSelect(text ?? "");
+          //       props.setFiles([{ file: files[0].name, size: files[0].size }]);
+          //     })
+          //     .catch((error) =>
+          //       console.error("Failed to extract text from pdf"),
+          //     );
+          // } else {
+          //   readTXTFile(files[0])
+          //     .then((text) => {
+          //       props.onDocumentSelect(text ?? "");
+          //       props.setFiles([{ file: files[0].name, size: files[0].size }]);
+          //     })
+          //     .catch((error) =>
+          //       console.error("Failed to extract text from pdf"),
+          //     );
+          // }
         };
         fileInput.click();
       })),
@@ -404,18 +444,19 @@ export function DocumentsList(props: {
     if (filesLength > 3) {
       files.splice(3, filesLength - 3);
     }
-    //setAttachImages(images);
+    
   }
 
   const deleteDocument = async (file: string) => {
     if (confirm(`Are you sure you want to delete ${file} ?`)) {
       props.setFiles([]);
-      props.onDocumentSelect("");
+      props.onDocumentBytesSelect(undefined)
     }
   };
 
   return (
     <div>
+      {showMessage&&<div>{message}</div>}
       {props.showDocumentsList === true && (
         <>
           <IconButton
@@ -836,14 +877,15 @@ function _Chat() {
   const [attachImages, setAttachImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
 
-  const [attachDocument, setAttachDocument] = useState("");
+
+  const [attachDocument, setAttachDocument] = useState<AttachmentDocument>();
 
   const [files, setFiles] = useState<UploadDocumentProps[]>([]);
 
   // prompt hints
   const promptStore = usePromptStore();
   const [promptHints, setPromptHints] = useState<RenderPompt[]>([]);
-  const [documents, setDocuments] = useState<DocumentProps[]>([]);
+
   const [showDocuments, setShowDocuments] = useState(false);
   const onSearch = useDebouncedCallback(
     (text: string) => {
@@ -925,7 +967,9 @@ function _Chat() {
     localStorage.setItem(LAST_INPUT_KEY, userInput);
     setUserInput("");
     setFiles([]);
-    setAttachDocument("");
+    setAttachDocument(undefined);
+    setShowDocuments(false);
+
     setPromptHints([]);
     if (!isMobileScreen) inputRef.current?.focus();
     setAutoScroll(true);
@@ -1541,12 +1585,12 @@ function _Chat() {
                                 onClick={() => onResend(message)}
                               />
                               {/* 检查是否是第一个user 消息 */}
-                              {(i>1||messages.length===2)&&
-                              <ChatAction
-                                text={Locale.Chat.Actions.Delete}
-                                icon={<DeleteIcon />}
-                                onClick={() => onDelete(message.id ?? i)}
-                              />
+                              {(i > 1 || messages.length === 2) &&
+                                <ChatAction
+                                  text={Locale.Chat.Actions.Delete}
+                                  icon={<DeleteIcon />}
+                                  onClick={() => onDelete(message.id ?? i)}
+                                />
                               }
                               <ChatAction
                                 text={Locale.Chat.Actions.Pin}
@@ -1645,9 +1689,8 @@ function _Chat() {
           showDocumentsList={showDocuments}
           files={files}
           setFiles={setFiles}
-          onDocumentSelect={(file) => {
-            console.log("onDocumentSelect", file);
-            setAttachDocument(file);
+          onDocumentBytesSelect={(data) => {
+            setAttachDocument(data)
           }}
         />
 

@@ -24,7 +24,7 @@ import {
   SUMMARIZE_MODEL,
   GEMINI_SUMMARIZE_MODEL,
 } from "../constant";
-import { ClientApi, RequestMessage, MultimodalContent } from "../client/api";
+import { ClientApi, RequestMessage, MultimodalContent, AttachmentDocument } from "../client/api";
 import { ChatControllerPool } from "../client/controller";
 import { prettyObject } from "../utils/format";
 import { estimateTokenLength } from "../utils/token";
@@ -478,7 +478,7 @@ export const useChatStore = createPersistStore(
       async onUserInput(
         content: string,
         attachImages: string[],
-        attachFile: string,
+        attachFile?: AttachmentDocument
       ) {
         const session = get().currentSession();
         const modelConfig = session.mask.modelConfig;
@@ -487,6 +487,7 @@ export const useChatStore = createPersistStore(
         console.log("[User Input] after template: ", userContent);
 
         let mContent: string | MultimodalContent[] = userContent;
+
 
         if (attachImages && attachImages.length > 0) {
           mContent = [
@@ -507,6 +508,22 @@ export const useChatStore = createPersistStore(
           );
         }
 
+       
+        if (attachFile){
+          console.log(`have attachFile ${attachFile.name}`,)
+          mContent = [
+            {
+              type: "text",
+              text: userContent,
+            },
+          ];
+          mContent = mContent.concat([
+            {
+              type:"doc",
+              doc:attachFile,
+            }]);
+        }
+
         const loadFilelist = async (file: string) => {
           try {
             const response = await fetch(`/api/documents/list?file=${file}`);
@@ -519,17 +536,17 @@ export const useChatStore = createPersistStore(
           }
         };
 
-        if (attachFile && attachFile !== "") {
-          mContent = [
-            {
-              type: "text",
-              text: userContent,
-            },
-          ];
-          mContent = mContent.concat([
-            { type: "text", text: JSON.stringify({ context: attachFile }) },
-          ]);
-        }
+        // if (attachFile && attachFile !== "") {
+        //   mContent = [
+        //     {
+        //       type: "text",
+        //       text: userContent,
+        //     },
+        //   ];
+        //   mContent = mContent.concat([
+        //     { type: "text", text: JSON.stringify({ context: attachFile }) },
+        //   ]);
+        // }
 
         let userMessage: ChatMessage = createMessage({
           role: "user",

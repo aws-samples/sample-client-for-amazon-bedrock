@@ -464,4 +464,41 @@ const extractTextFromXlsx = async (file: File): Promise<string | undefined> => {
   });
 };
 
-export { pdfToText, readTXTFile, extractTextFromDocx, extractTextFromXlsx };
+const readFileAsBytes = async (file: File): Promise<Uint8Array | undefined> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      if (reader.result instanceof ArrayBuffer) {
+        resolve(new Uint8Array(reader.result));
+      } else {
+        reject(new Error("Failed to read file"));
+      }
+    };
+
+    reader.onerror = () => {
+      reject(reader.error);
+    };
+
+    reader.readAsArrayBuffer(file);
+  });
+};
+
+async function calculateSHA1(input: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(input);
+
+  const hashBuffer = await window.crypto.subtle.digest('SHA-1', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+  return hashHex;
+}
+
+function checkFileExtension(extName: string): boolean {
+  const allowedExtensions = ['pdf', 'csv', 'doc', 'docx', 'xls', 'xlsx', 'html', 'txt', 'md'];
+  return allowedExtensions.includes(extName.toLowerCase())
+}
+
+
+export { pdfToText, readTXTFile, extractTextFromDocx, extractTextFromXlsx,readFileAsBytes ,calculateSHA1,checkFileExtension};
