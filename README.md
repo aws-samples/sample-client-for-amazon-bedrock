@@ -47,7 +47,7 @@ https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/downloa
 https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.1/sample-client-for-amazon-bedrock_1.2.1_amd64.AppImage.tar.gz
 
 ### Android:
-coming soon！
+https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.1/app-release.apk
 
 ### iOS:
 coming soon!
