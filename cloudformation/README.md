@@ -20,4 +20,4 @@ Only supports regions where Amazon Bedrock is available (such as `us-west-2`). T
 
    - **Web + BRConnector**
 
-     [![Launch Stack](../assets/launch-stack.png)](https://console.aws.amazon.com/cloudformation/home#/stacks/create/template?stackName=SampleClientForBedrockBRConnector&templateURL=s3://sample-client-for-bedrock-clouformation/quick-build-brconnector.yaml)
+     [![Launch Stack](../assets/launch-stack.png)](https://console.aws.amazon.com/cloudformation/home#/stacks/create/template?stackName=SampleClientForBedrockBRConnector&templateURL=https://sample-client-for-bedrock-clouformation.s3.us-west-2.amazonaws.com/quick-build-brconnector.yaml)
