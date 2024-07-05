@@ -1,6 +1,6 @@
 # Web Sample Client for Bedrock
 
-Those Cloudformation are used to deploy on AWS and use can 
+Deploy your Sample Client for Bedrock on AWS using cloudformation
 
 ## Deployment
 
