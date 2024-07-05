@@ -6,17 +6,20 @@
     "dev": "next dev",
     "build": "cross-env BUILD_MODE=standalone next build",
     "start": "next start",
-    "app:electron-dev": "cd electron-app && npm run dev",
-    "app:electron-build": "npm run export && cd electron-app && npm run build",
-    "app:electron-start-prd": "cd electron-app && NODE_ENV=production npm run start",
-    "app:electron-start-dev": "cd electron-app && NODE_ENV=development npm run start",
     "export": "cross-env BUILD_MODE=export BUILD_APP=1 next build",
     "export:dev": "cross-env BUILD_MODE=export BUILD_APP=1 next dev",
     "app:dev": "yarn tauri dev",
     "app:build": "yarn tauri build",
+    "app_android:build":"yarn export && zip -r ./flutter_app/assets/web.zip out && flutter build apk --release",
+    "app_ios:build":"yarn export && zip -r ./flutter_app/assets/web.zip out && flutter build ios --release",
+    "app_ios:dev":"yarn export && zip -r ./flutter_app/assets/web.zip out && open -a Simulator && cd ./flutter_app && flutter run",
     "lint": "next lint",
     "prompts": "node ./scripts/fetch-prompts.mjs",
     "prepare": "husky install",
+    "app:electron-dev": "cd electron-app && npm run dev",
+    "app:electron-build": "npm run export && cd electron-app && npm run build",
+    "app:electron-start-prd": "cd electron-app && NODE_ENV=production npm run start",
+    "app:electron-start-dev": "cd electron-app && NODE_ENV=development npm run start",
     "proxy-dev": "sh ./scripts/init-proxy.sh && proxychains -f ./scripts/proxychains.conf yarn dev"
   },
   "dependencies": {
@@ -82,5 +85,6 @@
   },
   "resolutions": {
     "lint-staged/yaml": "^2.2.2"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
