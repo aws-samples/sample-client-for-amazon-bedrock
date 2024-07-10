@@ -10,7 +10,15 @@ if [ $? -eq 0 ]; then
     
     # Create zip file
     echo "Creating zip file..."
-    zip -r brclient-web.zip out
+    # Change to the "out" directory
+    cd out
+
+    # Create zip file
+    echo "Creating zip file..."
+    zip -r ../brclient-web.zip *
+
+    # Change back to the parent directory
+    cd ..
     
     # Check if zip was successful
     if [ $? -eq 0 ]; then
@@ -25,3 +33,4 @@ else
 fi
 
 echo "Script completed."
+

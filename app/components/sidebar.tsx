@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 
 import styles from "./home.module.scss";
 
@@ -16,7 +16,8 @@ import DragIcon from "../icons/drag.svg";
 
 import Locale from "../locales";
 
-import { useAppConfig, useChatStore } from "../store";
+import { useAppConfig, useChatStore, useAccessStore } from "../store";
+import { getAWSCognitoUserInfo } from "../client/platforms/aws_cognito";
 
 import {
   DEFAULT_SIDEBAR_WIDTH,
@@ -131,6 +132,7 @@ function useDragSideBar() {
 
 export function SideBar(props: { className?: string }) {
   const chatStore = useChatStore();
+  const accessStore = useAccessStore();
 
   // drag side bar
   const { onDragStart, shouldNarrow } = useDragSideBar();
@@ -141,6 +143,21 @@ export function SideBar(props: { className?: string }) {
     () => isIOS() && isMobileScreen,
     [isMobileScreen],
   );
+  const [userInfo, setUserInfo] = useState<any>({});
+
+  useEffect(() => {
+    if (accessStore.awsCognitoUser) {
+      getAWSCognitoUserInfo().then((data) => {
+        if (!data) {
+          return;
+        }
+
+        setUserInfo({
+          name: data.username,
+        });
+      });
+    }
+  }, [accessStore.awsCognitoUser]);
 
   useHotKey();
 
@@ -159,7 +176,11 @@ export function SideBar(props: { className?: string }) {
           Bedrock Client
         </div>
         <div className={styles["sidebar-sub-title"]}>
-          Your own AI assistant with Bedrock.
+          {accessStore.awsCognitoUser && userInfo.name ? (
+            <>Hi {userInfo.name} welcome using Bedrock</>
+          ) : (
+            <>Your own AI assistant with Bedrock.</>
+          )}
         </div>
         <div className={styles["sidebar-logo"] + " no-dark"}>
           <BedrockIcon />
