@@ -177,7 +177,7 @@ export function SideBar(props: { className?: string }) {
         </div>
         <div className={styles["sidebar-sub-title"]}>
           {accessStore.awsCognitoUser && userInfo.name ? (
-            <>Hi {userInfo.name} welcome using Bedrock</>
+            <>Hi {userInfo.name}</>
           ) : (
             <>Your own AI assistant with Bedrock.</>
           )}
