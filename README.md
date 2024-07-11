@@ -33,18 +33,18 @@ The Mac App files were signed by a community contributor for your convenience. T
 ## Download links:
 
 ### Windows:
-https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.1/Sample.Client.for.Amazon.Bedrock_1.2.2_x64-setup.exe
+https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.2/Sample.Client.for.Amazon.Bedrock_1.2.2_x64-setup.exe
 
-https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.1/Sample.Client.for.Amazon.Bedrock_1.2.2_x64_en-US.msi.zip
+https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.2/Sample.Client.for.Amazon.Bedrock_1.2.2_x64_en-US.msi.zip
 
 ### Mac M Series:
-https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.1/Sample.Client.for.Amazon.Bedrock_1.2.2_aarch64.dmg
+https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.2/Sample.Client.for.Amazon.Bedrock_1.2.2_aarch64.dmg
 
 ### Mac x86 Series:
-https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.1/Sample.Client.for.Amazon.Bedrock_1.2.2_x64.dmg
+https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.2/Sample.Client.for.Amazon.Bedrock_1.2.2_x64.dmg
 
 ### Linux:
-https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.1/sample-client-for-amazon-bedrock_1.2.2_amd64.AppImage.tar.gz
+https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.2/sample-client-for-amazon-bedrock_1.2.2_amd64.AppImage.tar.gz
 
 ### Android:
 https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.1/app-release.apk
