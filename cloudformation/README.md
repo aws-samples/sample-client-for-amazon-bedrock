@@ -1,7 +1,8 @@
 # Web Sample Client for Bedrock
 
 Deploy your Sample Client for Bedrock on AWS using cloudformation.
-Special thanks to :- [@username] (https://www.github.com/maxjiang153) contribution
+
+Special thanks to [@maxjiang153](https://www.github.com/maxjiang153) contribution!!
 
 ## Deployment
 
