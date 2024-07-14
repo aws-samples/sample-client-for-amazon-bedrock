@@ -47,7 +47,7 @@ https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/downloa
 https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.2/sample-client-for-amazon-bedrock_1.2.2_amd64.AppImage.tar.gz
 
 ### Android:
-https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.1/app-release.apk
+https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.2/app-release_1.2.2.apk
 
 ### iOS:
 TBC
