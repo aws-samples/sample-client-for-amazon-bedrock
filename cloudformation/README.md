@@ -1,6 +1,6 @@
 # Web Sample Client for Bedrock
 
-Deploy your Sample Client for Bedrock on AWS using cloudformation
+Deploy your Sample Client for Bedrock on AWS using cloudformation.
 
 ## Deployment
 
@@ -14,9 +14,9 @@ Only supports regions where Amazon Bedrock is available (such as `us-west-2`). T
 
      [![Launch Stack](../assets/launch-stack.png)](https://console.aws.amazon.com/cloudformation/home#/stacks/create/template?stackName=SampleClientForBedrockWeb&templateURL=https://sample-client-for-bedrock-clouformation.s3.us-west-2.amazonaws.com/BRClientWebDeploy.json)
 
-   - **Web + Cognito**
+   - **Web + Cognito**  (Special thanks to [@maxjiang153](https://github.com/maxjiang153) contribution!!)
 
-     Coming Soon...
+     [![Launch Stack](../assets/launch-stack.png)](https://console.aws.amazon.com/cloudformation/home#/stacks/create/template?stackName=SampleClientForBedrockWeb&templateURL=https://sample-client-for-bedrock-clouformation.s3.us-west-2.amazonaws.com/BRClientWebDeployCognito.json)
 
    - **Web + BRConnector**
 

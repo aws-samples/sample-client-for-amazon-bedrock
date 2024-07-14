@@ -26,7 +26,9 @@ const DEFAULT_ACCESS_STATE = {
   // AWS
   awsAccessKeyId: "",
   awsSecretAccessKey: "",
+  awsSessionToken: "",
   awsRegion: "",
+  awsCognitoUser: false,
   BRProxyUrl: "",
 
   // openai

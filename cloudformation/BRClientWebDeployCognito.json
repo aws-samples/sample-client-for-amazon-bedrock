@@ -1,0 +1,578 @@
+{
+  "Parameters": {
+    "BRClientDownloadURL": {
+      "Type": "String",
+      "Default": "https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.1/sample-client-for-amazon-bedrock_1.2.1_web.zip"
+    }
+  },
+  "Resources": {
+    "BRClientCloudfrontOAI": {
+      "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
+      "Properties": {
+        "CloudFrontOriginAccessIdentityConfig": {
+          "Comment": "Allows CloudFront to reach the bucket"
+        }
+      },
+      "UpdateReplacePolicy": "Delete",
+      "DeletionPolicy": "Delete"
+    },
+    "BRClientBucket": {
+      "Type": "AWS::S3::Bucket",
+      "UpdateReplacePolicy": "Delete",
+      "DeletionPolicy": "Delete"
+    },
+    "BRClientBucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "BRClientBucket"
+        },
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": ["s3:GetBucket*", "s3:GetObject*", "s3:List*"],
+              "Effect": "Allow",
+              "Principal": {
+                "CanonicalUser": {
+                  "Fn::GetAtt": ["BRClientCloudfrontOAI", "S3CanonicalUserId"]
+                }
+              },
+              "Resource": [
+                {
+                  "Fn::GetAtt": ["BRClientBucket", "Arn"]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": ["BRClientBucket", "Arn"]
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": "s3:GetObject",
+              "Effect": "Allow",
+              "Principal": {
+                "CanonicalUser": {
+                  "Fn::GetAtt": ["BRClientCloudfrontOAI", "S3CanonicalUserId"]
+                }
+              },
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    {
+                      "Fn::GetAtt": ["BRClientBucket", "Arn"]
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      }
+    },
+    "BRClientCloudfront": {
+      "Type": "AWS::CloudFront::Distribution",
+      "Properties": {
+        "DistributionConfig": {
+          "DefaultCacheBehavior": {
+            "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+            "Compress": true,
+            "TargetOriginId": "BRClientBucketCloudfrontOrigin",
+            "ViewerProtocolPolicy": "redirect-to-https"
+          },
+          "DefaultRootObject": "index.html",
+          "Enabled": true,
+          "HttpVersion": "http2",
+          "IPV6Enabled": true,
+          "Origins": [
+            {
+              "DomainName": {
+                "Fn::GetAtt": ["BRClientBucket", "RegionalDomainName"]
+              },
+              "Id": "BRClientBucketCloudfrontOrigin",
+              "S3OriginConfig": {
+                "OriginAccessIdentity": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "origin-access-identity/cloudfront/",
+                      {
+                        "Ref": "BRClientCloudfrontOAI"
+                      }
+                    ]
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      },
+      "UpdateReplacePolicy": "Delete",
+      "DeletionPolicy": "Delete"
+    },
+    "BRClientDeployLambdaLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "RetentionInDays": 30
+      },
+      "UpdateReplacePolicy": "Retain",
+      "DeletionPolicy": "Retain"
+    },
+    "BRClientDeployLambdaRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      }
+    },
+    "BRClientDeployLambdaRolePolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "cloudfront:CreateInvalidation",
+                "cloudfront:GetInvalidation",
+                "cognito-idp:DescribeUserPoolClient"
+              ],
+              "Effect": "Allow",
+              "Resource": "*"
+            },
+            {
+              "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": ["BRClientDeployLambdaLogGroup", "Arn"]
+              }
+            },
+            {
+              "Action": [
+                "s3:Abort*",
+                "s3:DeleteObject*",
+                "s3:GetBucket*",
+                "s3:GetObject*",
+                "s3:List*",
+                "s3:PutObject",
+                "s3:PutObjectLegalHold",
+                "s3:PutObjectRetention",
+                "s3:PutObjectTagging",
+                "s3:PutObjectVersionTagging"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": ["BRClientBucket", "Arn"]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": ["BRClientBucket", "Arn"]
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "BRClientDeployLambdaRolePolicy",
+        "Roles": [
+          {
+            "Ref": "BRClientDeployLambdaRole"
+          }
+        ]
+      }
+    },
+    "BRClientDeployLambda": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "ZipFile": "\nimport os\nimport json\nimport boto3\nimport shutil\nimport base64\nimport logging\nimport mimetypes\nimport subprocess\nimport contextlib\nfrom uuid import uuid4\nfrom zipfile import ZipFile\nfrom urllib.request import Request, urlopen, urlretrieve\n\nlogger = logging.getLogger()\nlogger.setLevel(logging.INFO)\n\ncloudfront = boto3.client('cloudfront')\ns3c = boto3.client('s3')\ns3r = boto3.resource('s3')\ncognito = boto3.client('cognito-idp')\n\nCFN_SUCCESS = \"SUCCESS\"\nCFN_FAILED = \"FAILED\"\n\ndef handler(event, context):\n    def cfn_error(message=None):\n        logger.error(\"| cfn_error: %s\" % message)\n        cfn_send(event, context, CFN_FAILED, reason=message, physicalResourceId=event.get('PhysicalResourceId', None))\n\n    def cfn_send(event, context, responseStatus, responseData={}, physicalResourceId=None, noEcho=False, reason=None):\n        responseUrl = event['ResponseURL']\n        \n        responseBody = {}\n        responseBody['Status'] = responseStatus\n        responseBody['Reason'] = reason or ('See the details in CloudWatch Log Stream: ' + context.log_stream_name)\n        responseBody['PhysicalResourceId'] = physicalResourceId or context.log_stream_name\n        responseBody['StackId'] = event['StackId']\n        responseBody['RequestId'] = event['RequestId']\n        responseBody['LogicalResourceId'] = event['LogicalResourceId']\n        responseBody['NoEcho'] = noEcho\n        responseBody['Data'] = responseData\n        \n        body = json.dumps(responseBody)\n        logger.info(\"| response body:\\n\" + body)\n\n        headers = {\n            'content-type' : '',\n            'content-length' : str(len(body))\n        }\n\n        try:\n            request = Request(responseUrl, method='PUT', data=bytes(body.encode('utf-8')), headers=headers)\n            with contextlib.closing(urlopen(request)) as response:\n                logger.info(\"| status code: \" + response.reason)\n        except Exception as e:\n            logger.error(\"| unable to send response to CloudFormation\")\n            logger.exception(e)\n\n    def cloudfront_invalidate(distribution_id):\n        distribution_paths = [\"/*\"]\n        invalidation_resp = cloudfront.create_invalidation(\n            DistributionId=distribution_id,\n            InvalidationBatch={\n                'Paths': {\n                    'Quantity': len(distribution_paths),\n                    'Items': distribution_paths\n                },\n                'CallerReference': str(uuid4()),\n            })\n\n        cloudfront.get_waiter('invalidation_completed').wait(\n            DistributionId=distribution_id,\n            Id=invalidation_resp['Invalidation']['Id'])\n\n    def get_cognito_user_pool_application_authentication():\n        response = cognito.describe_user_pool_client(\n            UserPoolId=os.environ['CongitoUserPoolId'],\n            ClientId=os.environ['CognitoUserPoolApplicationId']\n        )\n\n        data = os.environ['CognitoUserPoolApplicationId'] + \":\" + response['UserPoolClient']['ClientSecret'];\n       \n        return base64.b64encode(bytes(data, 'utf-8')).decode(\"ascii\")\n\n    def clean_bucket(target_bucket_name):\n        bucket = s3r.Bucket(target_bucket_name)\n\n        bucket.objects.all().delete()\n\n    def unzip(archive, contents_dir):\n        with ZipFile(archive, \"r\") as zip:\n            zip.extractall(contents_dir)\n\n    def upload(target_bucket_name, contents_dir, parent_path):\n        try:\n            for path, subdirs, files in os.walk(contents_dir):\n                for file in files:\n                    dest_path = path.replace(contents_dir,\"\")\n                    __s3file = os.path.normpath(dest_path + parent_path + '/' + file)[1:]\n                    __local_file = os.path.join(path, file)\n    \n                    if os.path.isdir(file):\n                        upload(target_bucket_name, file, __s3file)\n                    else:\n                        content_type = mimetypes.guess_type(__local_file)[0];\n                            \n                        if not content_type:\n                            content_type = 'binary/octet-stream';\n    \n                        s3c.upload_file(__local_file, target_bucket_name, __s3file, ExtraArgs={'ContentType': content_type})\n        except Exception as e:\n            logger.error(\"| unable to upload file to s3\")\n            logger.exception(e)\n\n    def deploy(br_client_download_url, target_bucket_name):\n        temp_br_client_file = \"/tmp/brclient.zip\"\n        contents_dir = \"/tmp/brclient\"\n\n        if os.path.isdir(contents_dir):\n            shutil.rmtree(contents_dir);\n\n        os.mkdir(contents_dir)\n\n        urlretrieve(br_client_download_url, temp_br_client_file)\n\n        logger.info(\"download BRClient finished\")\n\n        unzip(temp_br_client_file, contents_dir)\n\n        logger.info(\"unzip BRClient finished\")\n\n        cognito_user_pool_application_authentication = get_cognito_user_pool_application_authentication();\n\n        with open(contents_dir + \"/aws_cognito_configuration.json\", \"w\") as aws_cognito_configuration_file:\n            json.dump({\n                \"AWS_REGION\": os.environ['AWS_REGION'],\n                \"COGNITO_IDENTITHY_POOL_ID\": os.environ['CognitoIdentityPoolId'],\n                \"COGNITO_USER_POOL_ID\": os.environ['CongitoUserPoolId'],\n                \"COGNITO_USER_POOL_CUSTOM_DOMAIN\": os.environ['CognitoUserPoolCustomDomain'],\n                \"COGNITO_USER_POOL_APPLICATION_ID\": os.environ['CognitoUserPoolApplicationId'],\n                \"COGNITO_USER_POOL_APPLICATION_AUTHENTICATION\": cognito_user_pool_application_authentication\n            }, aws_cognito_configuration_file)\n\n        upload(target_bucket_name, contents_dir, '');\n\n        logger.info(\"upload BRClient finished\")\n\n\n    logger.info({ key:value for (key, value) in event.items() if key != 'ResponseURL'})\n\n    request_type = event['RequestType']\n    physical_id = event.get('PhysicalResourceId', None)\n    br_client_download_url = os.environ['BRClientDownloadUrl']\n    target_bucket_name = os.environ['TargetBucketName']\n    distribution_id = os.environ['DistributionId']\n\n    try:\n        if request_type == \"Create\":\n            physical_id = \"BRClientDeployment-%s\" % str(uuid4())\n        else:\n            if not physical_id:\n                cfn_error(\"invalid request: request type is '%s' but 'PhysicalResourceId' is not defined\" % {request_type})\n                return\n\n        if request_type == \"Delete\" or request_type == \"Update\":\n            clean_bucket(target_bucket_name)\n\n        if request_type == \"Update\" or request_type == \"Create\":\n            deploy(br_client_download_url, target_bucket_name)\n            cloudfront_invalidate(distribution_id)\n\n        cfn_send(event, context, CFN_SUCCESS, physicalResourceId=physical_id, responseData={\n          'BRClientDownloadUrl': br_client_download_url,\n        })\n    except Exception as e:\n        logger.error(\"| FAILED\")\n        logger.exception(e)\n        cfn_error(\"failed, please check cloudwatch log\")\n    \n      "
+        },
+        "Environment": {
+          "Variables": {
+            "BRClientDownloadUrl": {
+              "Ref": "BRClientDownloadURL"
+            },
+            "TargetBucketName": {
+              "Ref": "BRClientBucket"
+            },
+            "DistributionId": {
+              "Ref": "BRClientCloudfront"
+            },
+            "CognitoIdentityPoolId": {
+              "Ref": "BRClientCognitoIdentityPool"
+            },
+            "CognitoUserPoolCustomDomain": {
+              "Fn::Join": [
+                "",
+                [
+                  "https://",
+                  {
+                    "Ref": "BRClientCognitoUserPoolDomain"
+                  },
+                  ".auth.",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  ".amazoncognito.com"
+                ]
+              ]
+            },
+            "CongitoUserPoolId": {
+              "Ref": "BRClientCognitoUserPool"
+            },
+            "CognitoUserPoolApplicationId": {
+              "Ref": "BRClientCognitoUserPoollAuthenticationProviderClient"
+            }
+          }
+        },
+        "Handler": "index.handler",
+        "LoggingConfig": {
+          "LogGroup": {
+            "Ref": "BRClientDeployLambdaLogGroup"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": ["BRClientDeployLambdaRole", "Arn"]
+        },
+        "Runtime": "python3.9",
+        "Timeout": 900
+      },
+      "DependsOn": [
+        "BRClientDeployLambdaRolePolicy",
+        "BRClientDeployLambdaRole",
+        "BRClientCognitoIdentityPool",
+        "BRClientCognitoUserPool",
+        "BRClientCognitoUserPoollAuthenticationProviderClient"
+      ],
+      "UpdateReplacePolicy": "Delete",
+      "DeletionPolicy": "Delete"
+    },
+    "BRClientDeployInvokeRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      },
+      "UpdateReplacePolicy": "Delete",
+      "DeletionPolicy": "Delete"
+    },
+    "BRClientDeployInvokeRolePolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "lambda:InvokeFunction",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": ["BRClientDeployLambda", "Arn"]
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "BRClientDeployInvokeRolePolicy",
+        "Roles": [
+          {
+            "Ref": "BRClientDeployInvokeRole"
+          }
+        ]
+      }
+    },
+    "BRClientDeploy": {
+      "Type": "Custom::AWS",
+      "Properties": {
+        "ServiceToken": {
+          "Fn::GetAtt": ["BRClientDeployLambda", "Arn"]
+        },
+        "BRClientDownloadURL": {
+          "Ref": "BRClientDownloadURL"
+        },
+        "Create": {
+          "Fn::Join": [
+            "",
+            [
+              "{\"service\":\"Lambda\",\"action\":\"invoke\",\"physicalResourceId\":{\"id\":\"CustomeResourceInvokeDeployLambda\"},\"parameters\":{\"FunctionName\":\"",
+              {
+                "Ref": "BRClientDeployLambda"
+              },
+              "\",\"Payload\":\"{}\"}}"
+            ]
+          ]
+        },
+        "Update": {
+          "Fn::Join": [
+            "",
+            [
+              "{\"service\":\"Lambda\",\"action\":\"invoke\",\"physicalResourceId\":{\"id\":\"CustomeResourceInvokeDeployLambda\"},\"parameters\":{\"FunctionName\":\"",
+              {
+                "Ref": "BRClientDeployLambda"
+              },
+              "\",\"Payload\":\"{}\"}}"
+            ]
+          ]
+        },
+        "Delete": {
+          "Fn::Join": [
+            "",
+            [
+              "{\"service\":\"Lambda\",\"action\":\"invoke\",\"physicalResourceId\":{\"id\":\"CustomeResourceInvokeDeployLambda\"},\"parameters\":{\"FunctionName\":\"",
+              {
+                "Ref": "BRClientDeployLambda"
+              },
+              "\",\"Payload\":\"{}\"}}"
+            ]
+          ]
+        },
+        "InstallLatestAwsSdk": false
+      },
+      "DependsOn": [
+        "BRClientDeployPolicy",
+        "BRClientDeployLambda",
+        "BRClientCognitoIdentityPool"
+      ],
+      "UpdateReplacePolicy": "Delete",
+      "DeletionPolicy": "Delete"
+    },
+    "BRClientDeployPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "lambda:Invoke",
+              "Effect": "Allow",
+              "Resource": "*"
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "BRClientDeployPolicy",
+        "Roles": [
+          {
+            "Ref": "BRClientDeployInvokeRole"
+          }
+        ]
+      }
+    },
+    "BRClientCognitoUserPool": {
+      "Type": "AWS::Cognito::UserPool",
+      "Properties": {
+        "AdminCreateUserConfig": {
+          "AllowAdminCreateUserOnly": true
+        }
+      },
+      "UpdateReplacePolicy": "Delete",
+      "DeletionPolicy": "Delete"
+    },
+    "BRClientCognitoUserPoolDomain": {
+      "Type": "AWS::Cognito::UserPoolDomain",
+      "Properties": {
+        "UserPoolId": {
+          "Ref": "BRClientCognitoUserPool"
+        },
+        "Domain": {
+          "Fn::Select": [
+            "2",
+            {
+              "Fn::Split": [
+                "/",
+                {
+                  "Ref": "AWS::StackId"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "DependsOn": ["BRClientCognitoUserPool"],
+      "UpdateReplacePolicy": "Delete",
+      "DeletionPolicy": "Delete"
+    },
+    "BRClientCognitoUserPoollAuthenticationProviderClient": {
+      "Type": "AWS::Cognito::UserPoolClient",
+      "Properties": {
+        "AllowedOAuthFlows": ["code"],
+        "AllowedOAuthFlowsUserPoolClient": true,
+        "AllowedOAuthScopes": [
+          "profile",
+          "openid",
+          "aws.cognito.signin.user.admin"
+        ],
+        "GenerateSecret": true,
+        "CallbackURLs": [
+          {
+            "Fn::Join": [
+              "",
+              [
+                "https://",
+                {
+                  "Fn::GetAtt": ["BRClientCloudfront", "DomainName"]
+                }
+              ]
+            ]
+          }
+        ],
+        "SupportedIdentityProviders": ["COGNITO"],
+        "UserPoolId": {
+          "Ref": "BRClientCognitoUserPool"
+        }
+      },
+      "DependsOn": ["BRClientCognitoUserPool", "BRClientCloudfront"]
+    },
+    "BRClientCognitoIdentityPool": {
+      "Type": "AWS::Cognito::IdentityPool",
+      "Properties": {
+        "AllowUnauthenticatedIdentities": false,
+        "CognitoIdentityProviders": [
+          {
+            "ClientId": {
+              "Ref": "BRClientCognitoUserPoollAuthenticationProviderClient"
+            },
+            "ProviderName": {
+              "Fn::Join": [
+                "",
+                [
+                  "cognito-idp.",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  ".",
+                  {
+                    "Ref": "AWS::URLSuffix"
+                  },
+                  "/",
+                  {
+                    "Ref": "BRClientCognitoUserPool"
+                  }
+                ]
+              ]
+            },
+            "ServerSideTokenCheck": false
+          }
+        ]
+      },
+      "UpdateReplacePolicy": "Delete",
+      "DeletionPolicy": "Delete"
+    },
+    "BRClientCognitoIdentityPoolAuthenticatedRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRoleWithWebIdentity",
+              "Condition": {
+                "StringEquals": {
+                  "cognito-identity.amazonaws.com:aud": {
+                    "Ref": "BRClientCognitoIdentityPool"
+                  }
+                },
+                "ForAnyValue:StringLike": {
+                  "cognito-identity.amazonaws.com:amr": "authenticated"
+                }
+              },
+              "Effect": "Allow",
+              "Principal": {
+                "Federated": "cognito-identity.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      }
+    },
+    "BRClientCognitoIdentityPoolAuthenticatedRolePolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "bedrock:ListFoundationModels",
+              "Effect": "Allow",
+              "Resource": "*"
+            },
+            {
+              "Action": [
+                "bedrock:InvokeModelWithResponseStream",
+                "bedrock:InvokeModel"
+              ],
+              "Effect": "Allow",
+              "Resource": "arn:aws:bedrock:*::foundation-model/*"
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "BRClientCognitoIdentityPoolAuthenticatedRolePolicy",
+        "Roles": [
+          {
+            "Ref": "BRClientCognitoIdentityPoolAuthenticatedRole"
+          }
+        ]
+      }
+    },
+    "BRClientCognitoIdentityPoolRoleAttachment": {
+      "Type": "AWS::Cognito::IdentityPoolRoleAttachment",
+      "Properties": {
+        "IdentityPoolId": {
+          "Ref": "BRClientCognitoIdentityPool"
+        },
+        "Roles": {
+          "authenticated": {
+            "Fn::GetAtt": [
+              "BRClientCognitoIdentityPoolAuthenticatedRole",
+              "Arn"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "BRRClientEndpointURL": {
+      "Description": "BRClient CloudFront Distribution Domain Name",
+      "Value": {
+        "Fn::GetAtt": ["BRClientCloudfront", "DomainName"]
+      },
+      "Export": {
+        "Name": "BRRClientEndpoint"
+      }
+    }
+  }
+}
