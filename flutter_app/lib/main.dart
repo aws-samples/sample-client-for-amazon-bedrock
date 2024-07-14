@@ -32,11 +32,12 @@ Future main() async {
 
   final appDocDir = await getApplicationSupportDirectory();
 
-  var webDir = Directory(path.join(appDocDir.path, "web"));
-  print("IndexHtml Path=========================:${path.join(webDir.path, 'index.html')}");
+  var webDir = Directory(path.join(appDocDir.path, "out"));
+  print("IndexHtml Path=========================:" +
+      path.join(webDir.path, 'index.html'));
   if (!webDir.existsSync()) {
     print("unzip...");
-    var data = await rootBundle.load("assets/web.zip");
+    var data = await rootBundle.load("assets/out.zip");
     final archive =
         ZipDecoder().decodeBuffer(InputStream(data.buffer.asUint8List()));
     await extractArchiveToDisk(archive, appDocDir.path);
@@ -68,7 +69,7 @@ Future main() async {
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  const MyApp({Key? key}) : super(key: key);
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -114,7 +115,7 @@ class _MyAppState extends State<MyApp> {
       },
       child: Scaffold(
           appBar: AppBar(
-            title: const Text('BRClient'),
+            title: Text('BRClient'),
             toolbarHeight: 0,
             systemOverlayStyle: const SystemUiOverlayStyle(
                 systemNavigationBarColor: Color(0xffe7f8ff)),
@@ -137,7 +138,7 @@ class _MyAppState extends State<MyApp> {
                   // }
                 },
                 onDownloadStartRequest: (controller, url) async {
-                  print("url================================$url");
+                  print("url================================"+url.toString());
                   if (url.url.scheme == "data") {
                     String? outputFile = await FilePicker.platform.saveFile(
                         dialogTitle: 'Please select an output file:',
@@ -148,7 +149,8 @@ class _MyAppState extends State<MyApp> {
                   }
                 },
                 onLongPressHitTestResult: (controller, hitTestResult) async {
-                  print("hitTestResult.type==========${hitTestResult.type}");
+                  print("hitTestResult.type==========" +
+                      hitTestResult.type.toString());
                   if (hitTestResult.type ==
                       InAppWebViewHitTestResultType.IMAGE_TYPE) {
                     // 处理长按图片事件
