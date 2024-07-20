@@ -2,7 +2,7 @@
 
 ## ¿Cómo puedo obtener ayuda rápidamente?
 
-1.  Pregunte a ChatGPT / Bing / Baidu / Google, etc.
+1.  Pregunte a Chat / Bing / Baidu / Google, etc.
 2.  Pregunte a los internautas. Sírvase proporcionar información general sobre el problema y una descripción detallada del problema encontrado. Las preguntas de alta calidad facilitan la obtención de respuestas útiles.
 
 # Problemas relacionados con la implementación
@@ -91,7 +91,7 @@ Puede haber muchas razones, por favor solucione los problemas en orden:
 *   Compruebe si la clave API está disponible;
 *   Si aún no puede identificar el problema después de los pasos anteriores, envíe un nuevo problema en el campo de problema con el registro de tiempo de ejecución de Verbel o el registro de tiempo de ejecución de Docker.
 
-## ¿Por qué la respuesta de ChatGPT es confusa?
+## ¿Por qué la respuesta de Chat es confusa?
 
 Interfaz de configuración: uno de los elementos de configuración del modelo es `temperature`, si este valor es mayor que 1, entonces existe el riesgo de una respuesta confusa, simplemente vuelva a llamarlo a dentro de 1.
 
@@ -169,7 +169,7 @@ OpenAI solo acepta tarjetas de crédito en regiones seleccionadas (no se pueden 
 
 *   El acceso a la API para GPT-4 requiere una solicitud independiente. Ingrese a la cola de la solicitud completando su información en la lista de espera (prepare su ID de organización OpenAI): https://openai.com/waitlist/gpt-4-api
     Espere el mensaje de correo después.
-*   Habilitar ChatGPT Plus no significa permisos GPT-4, y los dos no tienen nada que ver entre sí.
+*   Habilitar Chat Plus no significa permisos GPT-4, y los dos no tienen nada que ver entre sí.
 
 ## Uso de la interfaz de Azure OpenAI
 

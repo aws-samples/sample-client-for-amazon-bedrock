@@ -31,6 +31,7 @@ import { AuthPage } from "./auth";
 import { getClientConfig } from "../config/client";
 import { ClientApi } from "../client/api";
 import { useAccessStore } from "../store";
+import { validateAWSCongnito } from "../client/platforms/aws_cognito";
 
 export function Loading(props: { noLogo?: boolean }) {
   return (
@@ -130,38 +131,52 @@ function Screen() {
   const isHome = location.pathname === Path.Home;
   const isAuth = location.pathname === Path.Auth;
   const isMobileScreen = useMobileScreen();
+  const [validatingAWSCognito, setValidatingAWSCognito] =
+    useState<boolean>(true);
   const shouldTightBorder =
     getClientConfig()?.isApp || (config.tightBorder && !isMobileScreen);
+  const accessStore = useAccessStore();
 
   useEffect(() => {
     loadAsyncGoogleFont();
+
+    validateAWSCongnito(accessStore).then((validating) => {
+      setValidatingAWSCognito(validating);
+    });
   }, []);
 
   return (
     <div
       className={
         styles.container +
-        ` ${shouldTightBorder ? styles["tight-container"] : styles.container} ${getLang() === "ar" ? styles["rtl-screen"] : ""
+        ` ${shouldTightBorder ? styles["tight-container"] : styles.container} ${
+          getLang() === "ar" ? styles["rtl-screen"] : ""
         }`
       }
     >
-      {isAuth ? (
-        <>
-          <AuthPage />
-        </>
+      {validatingAWSCognito ? (
+        <Loading />
       ) : (
         <>
-          <SideBar className={isHome ? styles["sidebar-show"] : ""} />
+          {isAuth ? (
+            <>
+              <AuthPage />
+            </>
+          ) : (
+            <>
+              <SideBar className={isHome ? styles["sidebar-show"] : ""} />
 
-          <div className={styles["window-content"]} id={SlotID.AppBody}>
-            <Routes>
-              <Route path={Path.Home} element={<Chat />} />
-              <Route path={Path.NewChat} element={<NewChat />} />
-              <Route path={Path.Masks} element={<MaskPage />} />
-              <Route path={Path.Chat} element={<Chat />} />
-              <Route path={Path.Settings} element={<Settings />} />
-            </Routes>
-          </div>
+              <div className={styles["window-content"]} id={SlotID.AppBody}>
+                <Routes>
+                  <Route path={Path.Home} element={<Chat />} />
+                  <Route path={Path.NewChat} element={<NewChat />} />
+                  <Route path={Path.Masks} element={<MaskPage />} />
+                  <Route path={Path.Chat} element={<Chat />} />
+                  <Route path={Path.Settings} element={<Settings />} />
+                </Routes>
+              </div>
+            </>
+          )}
         </>
       )}
     </div>
@@ -170,7 +185,7 @@ function Screen() {
 
 export function useLoadData() {
   const config = useAppConfig();
-  var api: ClientApi = new ClientApi(ModelProvider.AWS);
+  var api: ClientApi = new ClientApi(ModelProvider.Claude);
   // if (config.modelConfig.model.startsWith("gemini")) {
   //   api = new ClientApi(ModelProvider.GeminiPro);
   // } else {

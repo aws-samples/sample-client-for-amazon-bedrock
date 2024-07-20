@@ -32,6 +32,12 @@ import {
   getMessageImages,
   isVisionModel,
 } from "@/app/utils";
+import {
+  isCognitoAKSKExpiration,
+  redirectCognitoLoginPage,
+  getCognitoRefreshToken,
+  refreshCognitoAuthentication,
+} from "./aws_cognito";
 // import vi from "@/app/locales/vi";
 
 export interface AWSListModelResponse {
@@ -294,6 +300,55 @@ export class ClaudeApi implements LLMApi {
 
     const models = useAppConfig.getState().models;
     const accessStore = useAccessStore.getState();
+    let credential;
+
+    // if aksk expiration then login again
+    if (accessStore.awsCognitoUser && isCognitoAKSKExpiration()) {
+      console.log("AWS credentials is expired, try to refresh credential");
+
+      const refreshToken = getCognitoRefreshToken();
+
+      if (refreshToken) {
+        console.log("Got AWS cognito refresh token, try to refresh");
+
+        credential = await refreshCognitoAuthentication(refreshToken).then(
+          (data) => {
+            if (data.credential) {
+              const credential = data.credential;
+
+              accessStore.update((access: any) => {
+                access.awsRegion = credential.awsRegion;
+                access.awsAccessKeyId = credential.awsAccessKeyId;
+                access.awsSecretAccessKey = credential.awsSecretAccessKey;
+                access.awsSessionToken = credential.awsSessionToken;
+                access.awsCognitoUser = true;
+              });
+
+              return credential;
+            }
+          },
+        );
+
+        console.log(
+          "Got AWS cognito refresh result:{}",
+          credential.awsAccessKeyId,
+        );
+
+        if (!credential) {
+          options.onError?.(
+            new Error("AWS credentials is expired, auto re-loging....."),
+          );
+          redirectCognitoLoginPage();
+          return;
+        }
+      } else {
+        options.onError?.(
+          new Error("AWS credentials is expired, auto re-loging....."),
+        );
+        redirectCognitoLoginPage();
+        return;
+      }
+    }
 
     if (
       accessStore.awsRegion === "" ||
@@ -312,8 +367,15 @@ export class ClaudeApi implements LLMApi {
     const aws_config_data = {
       region: accessStore.awsRegion,
       credentials: {
-        accessKeyId: accessStore.awsAccessKeyId,
-        secretAccessKey: accessStore.awsSecretAccessKey,
+        accessKeyId: credential
+          ? credential.awsAccessKeyId
+          : accessStore.awsAccessKeyId,
+        secretAccessKey: credential
+          ? credential.awsSecretAccessKey
+          : accessStore.awsSecretAccessKey,
+        sessionToken: credential
+          ? credential.awsSessionToken
+          : accessStore.awsSessionToken,
       },
     };
 

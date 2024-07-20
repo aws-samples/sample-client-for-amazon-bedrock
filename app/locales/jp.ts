@@ -11,7 +11,7 @@ const jp: PartialLocaleType = {
     ChatItemCount: (count: number) => `${count} 通のチャット`,
   },
   Chat: {
-    SubTitle: (count: number) => `ChatGPTとの ${count} 通のチャット`,
+    SubTitle: (count: number) => `${count} 通のチャット`,
     EditMessage: {
       Title: "全てのメッセージを修正",
       Topic: {
@@ -53,7 +53,7 @@ const jp: PartialLocaleType = {
     Copy: "すべてコピー",
     Download: "ファイルをダウンロード",
     MessageFromYou: "あなたからのメッセージ",
-    MessageFromChatGPT: "ChatGPTからのメッセージ",
+    MessageFromChatGPT: "Chatからのメッセージ",
     Format: {
       Title: "フォーマットをエクスポート",
       SubTitle: "マークダウン形式、PNG画像形式を選択できます。",

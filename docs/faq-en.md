@@ -2,7 +2,7 @@
 
 ## How to get help quickly?
 
-1. Ask ChatGPT / Bing / Baidu / Google, etc.
+1. Ask Chat / Bing / Baidu / Google, etc.
 2. Ask online friends. Please provide background information and a detailed description of the problem. High-quality questions are more likely to get useful answers.
 
 # Deployment Related Questions
@@ -92,7 +92,7 @@ There could be many reasons, please check the following in order:
 - Check if the api key is available;
 - If you still cannot determine the problem after going through the above steps, please submit a new issue in the issue area and attach the runtime log of vercel or the log of docker runtime.
 
-## Why does ChatGPT's reply get garbled
+## Why does Chats reply get garbled
 
 In the settings page - model settings, there is an item called `temperature`. If this value is greater than 1, it may cause garbled replies. Adjust it back to within 1.
 

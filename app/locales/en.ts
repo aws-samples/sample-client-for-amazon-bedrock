@@ -90,7 +90,7 @@ const en: LocaleType = {
     Copy: "Copy All",
     Download: "Download",
     MessageFromYou: "Message From You",
-    MessageFromChatGPT: "Message From ChatGPT",
+    MessageFromChatGPT: "Message From Chat",
     Share: "Share to ShareGPT",
     Format: {
       Title: "Export Format",
@@ -391,7 +391,7 @@ const en: LocaleType = {
     },
     MaxTokens: {
       Title: "Max Tokens",
-      SubTitle: "Maximum length of input tokens and generated tokens",
+      SubTitle: "The maximum number of tokens to allow in the generated response.",
     },
     PresencePenalty: {
       Title: "Presence Penalty",

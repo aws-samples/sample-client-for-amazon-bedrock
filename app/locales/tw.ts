@@ -23,7 +23,7 @@ const tw = {
     ChatItemCount: (count: number) => `${count} 則對話`,
   },
   Chat: {
-    SubTitle: (count: number) => `您已經與 ChatGPT 進行了 ${count} 則對話`,
+    SubTitle: (count: number) => `進行了 ${count} 則對話`,
     EditMessage: {
       Title: "編輯消息記錄",
       Topic: {
@@ -89,7 +89,7 @@ const tw = {
     Download: "下載檔案",
     Share: "分享到 ShareGPT",
     MessageFromYou: "來自您的訊息",
-    MessageFromChatGPT: "來自 ChatGPT 的訊息",
+    MessageFromChatGPT: "來自 Chat 的訊息",
     Format: {
       Title: "導出格式",
       SubTitle: "可以導出 Markdown 文本或者 PNG 圖片",
@@ -156,7 +156,7 @@ const tw = {
     },
     InjectSystemPrompts: {
       Title: "匯入系統提示",
-      SubTitle: "強制在每個請求的訊息列表開頭新增一個模擬 ChatGPT 的系統提示",
+      SubTitle: "強制在每個請求的訊息列表開頭新增一個模擬 Chat 的系統提示",
     },
     InputTemplate: {
       Title: "用戶輸入預處理",

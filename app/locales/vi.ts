@@ -11,7 +11,7 @@ const vi: PartialLocaleType = {
     ChatItemCount: (count: number) => `${count} tin nhắn`,
   },
   Chat: {
-    SubTitle: (count: number) => `${count} tin nhắn với ChatGPT`,
+    SubTitle: (count: number) => `${count} tin nhắn với Chat`,
     Actions: {
       ChatList: "Xem danh sách chat",
       CompressedHistory: "Nén tin nhắn trong quá khứ",
@@ -41,7 +41,7 @@ const vi: PartialLocaleType = {
     Copy: "Sao chép tất cả",
     Download: "Tải xuống",
     MessageFromYou: "Tin nhắn của bạn",
-    MessageFromChatGPT: "Tin nhắn từ ChatGPT",
+    MessageFromChatGPT: "Tin nhắn từ Chat",
   },
   Memory: {
     Title: "Lịch sử tin nhắn",
@@ -74,7 +74,7 @@ const vi: PartialLocaleType = {
     InjectSystemPrompts: {
       Title: "Tiêm Prompt Hệ thống",
       SubTitle:
-        "Bắt buộc thêm một prompt hệ thống giả lập ChatGPT ở đầu danh sách tin nhắn cho mỗi yêu cầu",
+        "Bắt buộc thêm một prompt hệ thống giả lập Chat ở đầu danh sách tin nhắn cho mỗi yêu cầu",
     },
     Update: {
       Version: (x: string) => `Phiên bản: ${x}`,

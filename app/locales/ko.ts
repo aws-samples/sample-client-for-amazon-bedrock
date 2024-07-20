@@ -12,7 +12,7 @@ const ko: PartialLocaleType = {
     ChatItemCount: (count: number) => `${count}개의 메시지`,
   },
   Chat: {
-    SubTitle: (count: number) => `ChatGPT와의 ${count}개의 메시지`,
+    SubTitle: (count: number) => `${count}개의 메시지`,
     Actions: {
       ChatList: "채팅 목록으로 이동",
       CompressedHistory: "압축된 기억력 메모리 프롬프트",
@@ -42,7 +42,7 @@ const ko: PartialLocaleType = {
     Copy: "모두 복사",
     Download: "다운로드",
     MessageFromYou: "나의 메시지",
-    MessageFromChatGPT: "ChatGPT의 메시지",
+    MessageFromChatGPT: "Chat의 메시지",
   },
   Memory: {
     Title: "기억 프롬프트",
@@ -75,7 +75,7 @@ const ko: PartialLocaleType = {
     InjectSystemPrompts: {
       Title: "시스템 프롬프트 주입",
       SubTitle:
-        "각 요청의 메시지 목록의 시작에 ChatGPT 시스템 프롬프트를 강제로 추가합니다",
+        "각 요청의 메시지 목록의 시작에 Chat 시스템 프롬프트를 강제로 추가합니다",
     },
     Update: {
       Version: (x: string) => `버전: ${x}`,
