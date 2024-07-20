@@ -11,7 +11,7 @@ const no: PartialLocaleType = {
     ChatItemCount: (count: number) => `${count} meldinger`,
   },
   Chat: {
-    SubTitle: (count: number) => `${count} meldinger med ChatGPT`,
+    SubTitle: (count: number) => `${count} meldinger med Chat`,
     Actions: {
       ChatList: "Gå til chatlisten",
       CompressedHistory: "Komprimert historikk for instrukser",
@@ -37,7 +37,7 @@ const no: PartialLocaleType = {
     Copy: "Kopiere alle",
     Download: "Last ned",
     MessageFromYou: "Melding fra deg",
-    MessageFromChatGPT: "Melding fra ChatGPT",
+    MessageFromChatGPT: "Melding fra Chat",
   },
   Memory: {
     Title: "Minneinstruks",

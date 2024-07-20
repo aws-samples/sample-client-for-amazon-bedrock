@@ -88,7 +88,7 @@ const cn = {
     Download: "下载文件",
     Share: "分享到 ShareGPT",
     MessageFromYou: "用户",
-    MessageFromChatGPT: "ChatGPT",
+    MessageFromChatGPT: "Chat",
     Format: {
       Title: "导出格式",
       SubTitle: "可以导出 Markdown 文本或者 PNG 图片",
@@ -155,7 +155,7 @@ const cn = {
     },
     InjectSystemPrompts: {
       Title: "注入系统级提示信息",
-      SubTitle: "强制给每次请求的消息列表开头添加一个模拟 ChatGPT 的系统提示",
+      SubTitle: "强制给每次请求的消息列表开头添加一个模拟 Chat 的系统提示",
     },
     InputTemplate: {
       Title: "用户输入预处理",

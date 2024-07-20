@@ -139,7 +139,7 @@ const bn: PartialLocaleType = {
     InjectSystemPrompts: {
       Title: "حقن تلميحات النظام",
       SubTitle:
-        "قم بإضافة تلميحة نظام محاكاة ChatGPT إلى بداية قائمة الرسائل المُطلَبة في كل طلب",
+        "قم بإضافة تلميحة نظام محاكاة Chat إلى بداية قائمة الرسائل المُطلَبة في كل طلب",
     },
     InputTemplate: {
       Title: "ইনপুট টেমপ্লেট",

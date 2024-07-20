@@ -11,7 +11,7 @@ const ru: PartialLocaleType = {
     ChatItemCount: (count: number) => `${count} сообщений`,
   },
   Chat: {
-    SubTitle: (count: number) => `${count} сообщений с ChatGPT`,
+    SubTitle: (count: number) => `${count} сообщений с Chat`,
     Actions: {
       ChatList: "Перейти к списку чатов",
       CompressedHistory: "Сжатая история памяти",
@@ -41,7 +41,7 @@ const ru: PartialLocaleType = {
     Copy: "Копировать все",
     Download: "Скачать",
     MessageFromYou: "Сообщение от вас",
-    MessageFromChatGPT: "Сообщение от ChatGPT",
+    MessageFromChatGPT: "Сообщение от Chat",
   },
   Memory: {
     Title: "Память",
@@ -74,7 +74,7 @@ const ru: PartialLocaleType = {
     InjectSystemPrompts: {
       Title: "Вставить системные подсказки",
       SubTitle:
-        "Принудительно добавить симулированную системную подсказку ChatGPT в начало списка сообщений для каждого запроса",
+        "Принудительно добавить симулированную системную подсказку Chat в начало списка сообщений для каждого запроса",
     },
     Update: {
       Version: (x: string) => `Версия: ${x}`,

@@ -76,7 +76,7 @@ const id: PartialLocaleType = {
     Copy: "Salin Semua",
     Download: "Unduh",
     MessageFromYou: "Pesan dari Anda",
-    MessageFromChatGPT: "Pesan dari ChatGPT",
+    MessageFromChatGPT: "Pesan dari Chat",
     Share: "Bagikan ke ShareGPT",
     Format: {
       Title: "Format Ekspor",
@@ -143,7 +143,7 @@ const id: PartialLocaleType = {
     InjectSystemPrompts: {
       Title: "Suntikkan Petunjuk Sistem",
       SubTitle:
-        "Tambahkan petunjuk simulasi sistem ChatGPT di awal daftar pesan yang diminta dalam setiap permintaan",
+        "Tambahkan petunjuk simulasi sistem Chat di awal daftar pesan yang diminta dalam setiap permintaan",
     },
     InputTemplate: {
       Title: "Template Input",
