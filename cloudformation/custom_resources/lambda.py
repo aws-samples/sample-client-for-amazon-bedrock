@@ -1,3 +1,4 @@
+
 import os
 import json
 import boto3
@@ -78,7 +79,7 @@ def handler(event, context):
             ClientId=os.environ['CognitoUserPoolApplicationId']
         )
 
-        data = os.environ['CognitoUserPoolApplicationId'] + ":" + response['UserPoolClient']['ClientSecret']
+        data = os.environ['CognitoUserPoolApplicationId'] + ":" + response['UserPoolClient']['ClientSecret'];
        
         return base64.b64encode(bytes(data, 'utf-8')).decode("ascii")
 
@@ -102,10 +103,10 @@ def handler(event, context):
                     if os.path.isdir(file):
                         upload(target_bucket_name, file, __s3file)
                     else:
-                        content_type = mimetypes.guess_type(__local_file)[0]
+                        content_type = mimetypes.guess_type(__local_file)[0];
                             
                         if not content_type:
-                            content_type = 'binary/octet-stream'
+                            content_type = 'binary/octet-stream';
     
                         s3c.upload_file(__local_file, target_bucket_name, __s3file, ExtraArgs={'ContentType': content_type})
         except Exception as e:
@@ -117,7 +118,7 @@ def handler(event, context):
         contents_dir = "/tmp/brclient"
 
         if os.path.isdir(contents_dir):
-            shutil.rmtree(contents_dir)
+            shutil.rmtree(contents_dir);
 
         os.mkdir(contents_dir)
 
@@ -129,7 +130,7 @@ def handler(event, context):
 
         logger.info("unzip BRClient finished")
 
-        cognito_user_pool_application_authentication = get_cognito_user_pool_application_authentication()
+        cognito_user_pool_application_authentication = get_cognito_user_pool_application_authentication();
 
         with open(contents_dir + "/aws_cognito_configuration.json", "w") as aws_cognito_configuration_file:
             json.dump({
@@ -141,7 +142,7 @@ def handler(event, context):
                 "COGNITO_USER_POOL_APPLICATION_AUTHENTICATION": cognito_user_pool_application_authentication
             }, aws_cognito_configuration_file)
 
-        upload(target_bucket_name, contents_dir, '')
+        upload(target_bucket_name, contents_dir, '');
 
         logger.info("upload BRClient finished")
 
@@ -176,3 +177,5 @@ def handler(event, context):
         logger.error("| FAILED")
         logger.exception(e)
         cfn_error("failed, please check cloudwatch log")
+    
+      
