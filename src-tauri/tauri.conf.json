@@ -67,7 +67,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "brclient.chat",
+      "identifier": "com.damonai.brclient",
       "longDescription": "Sample Client for Amazon Bedrock is a cross-platform Bedrock client, including Web/Win/Linux/OSX/PWA.",
       "macOS": {
         "entitlements": null,
