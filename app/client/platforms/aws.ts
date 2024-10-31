@@ -127,7 +127,7 @@ export class ClaudeApi implements LLMApi {
             if (messages[i].content !== "") {
               system_prompt = messages[i].content;
             } else {
-              system_prompt = "' '";
+              system_prompt = "'.'";
             }
           }
         }
@@ -273,9 +273,9 @@ export class ClaudeApi implements LLMApi {
       });
     }
 
-    console.log("messages[0].role", messages[0].role)
+    // console.log("messages[0].role", messages[0].role)
 
-    const requestPayload = {
+    const requestPayload: any = {
       ...(has_system_prompt ? { system: system_prompt } : {}),
       messages: new_messages,
       top_p: modelConfig.top_p,
@@ -385,7 +385,6 @@ export class ClaudeApi implements LLMApi {
 
     // console.log("is vision model", visionModel);
 
-    // console.log("options.messages", options.messages);
 
     const messages = options.messages.map((v) => ({
       role: v.role,
@@ -399,13 +398,12 @@ export class ClaudeApi implements LLMApi {
     if (!modelID || !modelVersion) {
       throw new Error(`Could not find modelID or modelVersion.`);
     }
-    const requestPayload = this.convertMessagePayload(
+
+    const requestPayload: any = this.convertMessagePayload(
       messages,
       modelConfig,
       modelVersion,
     );
-
-    // console.log("requestPayload", requestPayload);
 
     // add max_tokens to vision model
     if (visionModel) {
@@ -435,7 +433,6 @@ export class ClaudeApi implements LLMApi {
       let metrics: any = {};
 
       if (shouldStream) {
-        console.log("streaming");
         let responseText = "";
         let remainText = "";
         let finished = false;
@@ -473,6 +470,7 @@ export class ClaudeApi implements LLMApi {
 
         const payload: ConverseCommandInput = {
           modelId: modelID,
+          ...(requestPayload.system ? { system: [{ text: requestPayload.system }] } : [{ text: "." }]),
           messages: requestPayload.messages,
           inferenceConfig: {
             maxTokens: requestPayload.max_tokens,
@@ -480,6 +478,7 @@ export class ClaudeApi implements LLMApi {
             topP: requestPayload.top_p
           }
         }
+        // console.log(payload, ".............")
         const response = await client.converseStream(payload);
 
         try {
@@ -501,10 +500,11 @@ export class ClaudeApi implements LLMApi {
 
 
       } else {
-        console.log("not streaming");
+        // console.log("not streaming");
 
         const payload: ConverseCommandInput = {
           modelId: modelID,
+          ...(requestPayload.system ? { system: [{ text: requestPayload.system }] } : [{ text: "." }]),
           messages: requestPayload.messages,
           inferenceConfig: {
             maxTokens: requestPayload.max_tokens,
