@@ -40,6 +40,8 @@ import {
 } from "./aws_cognito";
 // import vi from "@/app/locales/vi";
 
+const BEDROCK_ENDPOINT = process.env.NEXT_PUBLIC_BEDROCK_ENDPOINT;
+
 export interface AWSListModelResponse {
   object: string;
   data: Array<{
@@ -364,6 +366,8 @@ export class ClaudeApi implements LLMApi {
       return;
     }
 
+    const BEDROCK_ENDPOINT = accessStore.bedrockEndpoint || process.env.NEXT_PUBLIC_BEDROCK_ENDPOINT;
+
     const aws_config_data = {
       region: accessStore.awsRegion,
       credentials: {
@@ -377,6 +381,7 @@ export class ClaudeApi implements LLMApi {
           ? credential.awsSessionToken
           : accessStore.awsSessionToken,
       },
+      ...(BEDROCK_ENDPOINT && { endpoint: BEDROCK_ENDPOINT }),
     };
 
     // console.log("aws_config_data", aws_config_data);

@@ -1026,6 +1026,23 @@ export function Settings() {
                       {accessStore.useBRProxy === "False" ? (
                         <>
                           <ListItem
+                            title={Locale.Settings.Access.AWS.BedRockEndpoint.Title}
+                            subTitle={
+                              Locale.Settings.Access.AWS.BedRockEndpoint.SubTitle
+                            }
+                          >
+                            <input
+                              type="text"
+                              value={accessStore.bedrockEndpoint}
+                              onChange={(e) =>
+                                accessStore.update(
+                                  (access) =>
+                                    (access.bedrockEndpoint = e.currentTarget.value),
+                                )
+                              }
+                            ></input>
+                          </ListItem>
+                          <ListItem
                             title={Locale.Settings.Access.AWS.Region.Title}
                             subTitle={
                               Locale.Settings.Access.AWS.Region.SubTitle

@@ -311,7 +311,6 @@ const en: LocaleType = {
           SubTitle: "Config Access Key",
           Placeholder: "input access key, xxxxxxxxxxxxxx",
         },
-
         SecretKey: {
           Title: "Secret Key",
           SubTitle: "Config Secret Key",
@@ -321,6 +320,11 @@ const en: LocaleType = {
           Title: "BRConnector Endpoint",
           SubTitle: "Please set your BRConnector endpoint, it must start with https://",
           Placeholder: "input BRConnector Endpoint",
+        },
+        BedRockEndpoint: {
+          Title: "Bedrock Endpoint",
+          SubTitle: "Please set your BedRockEndpoint, it must start with https://",
+          Placeholder: "input BedRock Endpoint",
         },
         ApiKey: {
           Title: "API Key",
