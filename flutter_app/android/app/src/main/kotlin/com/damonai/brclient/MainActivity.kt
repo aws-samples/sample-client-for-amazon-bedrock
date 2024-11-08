@@ -1,4 +1,4 @@
-package net.aithing.br_client_app
+package com.damonai.brclient
 
 import io.flutter.embedding.android.FlutterActivity
 

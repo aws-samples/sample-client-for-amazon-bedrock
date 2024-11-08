@@ -1,6 +1,6 @@
 [package]
 name = "Sample-Client-for-Amazon-Bedrock"
-version = "1.2.0"
+version = "1.2.3"
 description = "A cross platform app for Bedrock ChatBot."
 authors = ["Sample Client for Amazon Bedrock Dev Team"]
 license = "mit"
