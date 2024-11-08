@@ -74,7 +74,7 @@
         "exceptionDomain": "",
         "frameworks": [],
         "providerShortName": null,
-        "signingIdentity": "Developer ID Application: guo qiang (82T4ZQ28A7)"
+        "signingIdentity": null
       },
       "resources": [],
       "shortDescription": "Sample Client for Amazon Bedrock",
