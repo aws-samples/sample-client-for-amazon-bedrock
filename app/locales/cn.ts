@@ -317,7 +317,11 @@ const cn = {
           SubTitle: "请设置您的 BRConnector 的发布地址，必须包含 https://",
           Placeholder: "input secret key, xxxxxxxxxxxxxxxxxxxxxxxxxx",
         },
-
+        BedRockEndpoint: {
+          Title: "Bedrock Endpoint",
+          SubTitle: "Please set your BedRockEndpoint, it must start with https://",
+          Placeholder: "input BedRock Endpoint",
+        },
         ApiKey: {
           Title: "API Key",
           SubTitle: "请注意：此处的 API Key 需要向 BRConnector 申请，形如：br_xxxxxxxxxxxxxxxxxxxxxxx",
