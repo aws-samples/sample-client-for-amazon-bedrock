@@ -330,10 +330,10 @@ export function PromptHints(props: {
     <div className={styles["prompt-hints"]}>
       {props.prompts.map((prompt, i) => (
         <div
-            ref={i === selectIndex ? selectedRef : null}
+          ref={i === selectIndex ? selectedRef : null}
           className={
-              styles["prompt-hint"] +
-              ` ${i === selectIndex ? styles["prompt-hint-selected"] : ""}`
+            styles["prompt-hint"] +
+            ` ${i === selectIndex ? styles["prompt-hint-selected"] : ""}`
           }
           key={prompt.title + i.toString()}
           onClick={() => props.onPromptSelect(prompt)}
@@ -345,7 +345,6 @@ export function PromptHints(props: {
       ))}
     </div>
   );
-
 }
 
 interface DocumentProps {
