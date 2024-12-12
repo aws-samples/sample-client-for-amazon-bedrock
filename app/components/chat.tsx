@@ -270,7 +270,20 @@ export function PromptHints(props: {
   }, [props.prompts.length]);
 
   useEffect(() => {
+    let isComposing = false;
+
+    const onCompositionStart = () => {
+      isComposing = true;
+    };
+
+    const onCompositionEnd = () => {
+      isComposing = false;
+    };
+
     const onKeyDown = (e: KeyboardEvent) => {
+      if (isComposing || e.isComposing) {
+        return;
+      }
       if (noPrompts || e.metaKey || e.altKey || e.ctrlKey) {
         return;
       }
@@ -279,8 +292,8 @@ export function PromptHints(props: {
         e.stopPropagation();
         e.preventDefault();
         const nextIndex = Math.max(
-          0,
-          Math.min(props.prompts.length - 1, selectIndex + delta),
+            0,
+            Math.min(props.prompts.length - 1, selectIndex + delta),
         );
         setSelectIndex(nextIndex);
         selectedRef.current?.scrollIntoView({
@@ -300,9 +313,15 @@ export function PromptHints(props: {
       }
     };
 
+    document.addEventListener("compositionstart", onCompositionStart);
+    document.addEventListener("compositionend", onCompositionEnd);
     window.addEventListener("keydown", onKeyDown);
 
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("compositionstart", onCompositionStart);
+      document.removeEventListener("compositionend", onCompositionEnd);
+      window.removeEventListener("keydown", onKeyDown);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.prompts.length, selectIndex]);
 
