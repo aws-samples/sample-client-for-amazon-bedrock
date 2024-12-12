@@ -327,23 +327,23 @@ export function PromptHints(props: {
 
   if (noPrompts) return null;
   return (
-      <div className={styles["prompt-hints"]}>
-        {props.prompts.map((prompt, i) => (
-            <div
-                ref={i === selectIndex ? selectedRef : null}
-                className={
-                    styles["prompt-hint"] +
-                    ` ${i === selectIndex ? styles["prompt-hint-selected"] : ""}`
-                }
-                key={prompt.title + i.toString()}
-                onClick={() => props.onPromptSelect(prompt)}
-                onMouseEnter={() => setSelectIndex(i)}
-            >
-              <div className={styles["hint-title"]}>{prompt.title}</div>
-              <div className={styles["hint-content"]}>{prompt.content}</div>
-            </div>
-        ))}
-      </div>
+    <div className={styles["prompt-hints"]}>
+      {props.prompts.map((prompt, i) => (
+        <div
+            ref={i === selectIndex ? selectedRef : null}
+          className={
+              styles["prompt-hint"] +
+              ` ${i === selectIndex ? styles["prompt-hint-selected"] : ""}`
+          }
+          key={prompt.title + i.toString()}
+          onClick={() => props.onPromptSelect(prompt)}
+          onMouseEnter={() => setSelectIndex(i)}
+        >
+          <div className={styles["hint-title"]}>{prompt.title}</div>
+          <div className={styles["hint-content"]}>{prompt.content}</div>
+        </div>
+      ))}
+    </div>
   );
 
 }
