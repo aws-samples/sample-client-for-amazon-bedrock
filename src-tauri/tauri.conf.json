@@ -9,7 +9,7 @@
   },
   "package": {
     "productName": "Sample Client for Amazon Bedrock",
-    "version": "1.2.4"
+    "version": "1.2.5"
   },
   "tauri": {
     "allowlist": {
