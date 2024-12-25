@@ -10,6 +10,9 @@ import React, {
   RefObject,
 } from "react";
 
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+
 import {
   calculateSHA1,
   checkFileExtension,
@@ -69,8 +72,6 @@ import {
   getMessageImages,
   isVisionModel,
   compressImage,
-  extractTextFromDocx,
-  extractTextFromXlsx,
   readFileAsBytes,
 } from "../utils";
 
@@ -109,6 +110,7 @@ import { ExportMessageModal } from "./exporter";
 import { getClientConfig } from "../config/client";
 import { useAllModels } from "../utils/hooks";
 import { AttachmentDocument, MultimodalContent } from "../client/api";
+import { useSSEStore } from "../store/sse";
 
 
 
@@ -121,6 +123,7 @@ export function SessionConfigModel(props: { onClose: () => void }) {
   const session = chatStore.currentSession();
   const maskStore = useMaskStore();
   const navigate = useNavigate();
+  
 
   return (
     <div className="modal-mask">
@@ -338,6 +341,12 @@ interface DocumentProps {
 interface UploadDocumentProps {
   file: string;
   size: number;
+}
+
+
+interface MCPConnection {
+  file: string;
+  client: Client;
 }
 
 
@@ -917,6 +926,57 @@ function _Chat() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(measure, [userInput]);
 
+  const configs = useSSEStore((state) => state.configs);
+  const updateConfig = useSSEStore((state) => state.updateConfig);
+
+  const [tools, setTools] = useState([]);
+
+  const [connections, setConnections] = useState<{ [key: string]: Client }>({});
+
+ 
+  useEffect(() => {
+    const fetchTools = async () => {
+      const toolsList = [];
+      for (const config of configs) {
+        if (config.status === "connected" ) {
+          if(config.client){
+            const _tools = await config.client.listTools();
+            toolsList.push(_tools.tools);
+            console.log(_tools.tools);
+            connections[config.name] = config.client;
+          }else{
+            const transport = new SSEClientTransport(new URL(config.sseUrl));
+            transport.onmessage = (message: any) => {
+              console.log(message);
+            }
+  
+            const client = new Client({
+              name: config.name || "example-client",
+              version: "1.0.0",
+            }, {
+              capabilities: {}
+            });
+  
+            await client.connect(transport);
+            config.status = "connected"
+            const _tools = await client.listTools();
+            toolsList.push(_tools.tools);
+
+            connections[config.name] = client;
+           
+            console.log("not connected, and reconnect", config.name)
+          }
+         
+        }
+      }
+      setTools(toolsList as any);
+      console.log(toolsList);
+    };
+
+    fetchTools();
+    
+  }, [configs]);
+
   // chat commands shortcuts
   const chatCommands = useChatCommand({
     new: () => chatStore.newSession(),
@@ -949,6 +1009,27 @@ function _Chat() {
       }
     }
   };
+  const invokeTool = async (name: string, input: string, callback?: (response: any) => void) => {
+    try {
+      // Find the tool from configs
+      for (const config of configs) {
+        console.log(config.name, config.status,config.client)
+        if (config.status === "connected" ) {
+          const client = connections[config.name];
+          const response = await client.callTool({name, arguments: JSON.parse(input)});
+          console.log(`Tool ${name} response:`, response);
+          if (callback) {
+            callback(response);
+          }
+          return response;
+        }
+      }
+      throw new Error(`No connected MCP server found to invoke tool ${name}`);
+    } catch (error) {
+      console.error(`Failed to invoke tool ${name}:`, error);
+      throw error;
+    }
+  };
 
   const doSubmit = (userInput: string) => {
     if (userInput.trim() === "") return;
@@ -960,8 +1041,12 @@ function _Chat() {
       return;
     }
     setIsLoading(true);
+    
+   
+    
+    
     chatStore
-      .onUserInput(userInput, attachImages, attachDocument)
+      .onUserInput(userInput, attachImages, attachDocument, tools,invokeTool)
       .then(() => setIsLoading(false));
     setAttachImages([]);
     localStorage.setItem(LAST_INPUT_KEY, userInput);

@@ -43,7 +43,7 @@ export function Card(props: { children: JSX.Element[]; className?: string }) {
 
 export function ListItem(props: {
   title: string;
-  subTitle?: string;
+  subTitle?: string | string[];
   children?: JSX.Element | JSX.Element[];
   icon?: JSX.Element;
   className?: string;
@@ -60,7 +60,13 @@ export function ListItem(props: {
           <div>{props.title}</div>
           {props.subTitle && (
             <div className={styles["list-item-sub-title"]}>
-              {props.subTitle}
+              {Array.isArray(props.subTitle) ? (
+                props.subTitle.map((sub, index) => (
+                  <div key={index}>{sub}</div>
+                ))
+              ) : (
+                props.subTitle
+              )}
             </div>
           )}
         </div>
@@ -483,5 +489,31 @@ export function Selector<T>(props: {
         </List>
       </div>
     </div>
+  );
+}
+
+interface SwitchProps {
+  checked?: boolean;
+  disabled?: boolean;
+  onChange?: () => void;
+}
+
+export function Switch({ checked = false, disabled = false, onChange }: SwitchProps) {
+  return (
+    <label 
+      className={`switch ${disabled ? 'disabled' : ''}`}
+      onClick={(e) => {
+        e.preventDefault();
+        if (!disabled && onChange) onChange();
+      }}
+    >
+      <input 
+        type="checkbox" 
+        checked={checked} 
+        disabled={disabled}
+        readOnly
+      />
+      <span className="slider round"></span>
+    </label>
   );
 }

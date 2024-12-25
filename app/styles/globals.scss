@@ -1,5 +1,6 @@
 @import "./animation.scss";
 @import "./window.scss";
+@import "../components/ui-lib.scss";
 
 @mixin light {
   --theme: light;

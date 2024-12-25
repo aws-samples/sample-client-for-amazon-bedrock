@@ -1,7 +1,6 @@
 "use client";
 import {
-  ApiPath,
-  DEFAULT_API_HOST,
+
   // DEFAULT_MODELS,
   // OpenaiPath,
   REQUEST_TIMEOUT_MS,
@@ -9,11 +8,10 @@ import {
 } from "@/app/constant";
 import { useAccessStore, useAppConfig, useChatStore } from "@/app/store";
 import { ConverseCommandInput } from "@aws-sdk/client-bedrock-runtime";
-import { BedrockClient, AWSConfig } from "@/app/client/platforms/aws_utils";
+import { BedrockClient, } from "@/app/client/platforms/aws_utils";
 import Locale from "../../locales";
 import {
   ChatOptions,
-  getHeaders,
   LLMApi,
   LLMModel,
   LLMUsage,
@@ -29,7 +27,6 @@ import {
 // import { makeAzurePath } from "@/app/azure";
 import {
   getMessageTextContent,
-  getMessageImages,
   isVisionModel,
 } from "@/app/utils";
 import {
@@ -40,7 +37,6 @@ import {
 } from "./aws_cognito";
 // import vi from "@/app/locales/vi";
 
-const BEDROCK_ENDPOINT = process.env.NEXT_PUBLIC_BEDROCK_ENDPOINT;
 
 export interface AWSListModelResponse {
   object: string;
@@ -54,7 +50,6 @@ export interface AWSListModelResponse {
 export class ClaudeApi implements LLMApi {
   // private disableListModels = true;
   path(path: string): string {
-    const accessStore = useAccessStore.getState();
 
     return "https://facked-url.bedrock.com";
   }
@@ -235,8 +230,6 @@ export class ClaudeApi implements LLMApi {
           // put the contents in the last message to the new contents
 
           for (var k = 0; k < last_message.content.length; k++) {
-            const content_string =
-              last_message.content[k] == "" ? "' '" : last_message.content[k];
             new_contents.push(last_message.content[k]);
           }
         }
@@ -303,6 +296,9 @@ export class ClaudeApi implements LLMApi {
     const models = useAppConfig.getState().models;
     const accessStore = useAccessStore.getState();
     let credential;
+
+    const tools = options.tools;
+    console.log("tools", tools);
 
     // if aksk expiration then login again
     if (accessStore.awsCognitoUser && isCognitoAKSKExpiration()) {
@@ -473,35 +469,159 @@ export class ClaudeApi implements LLMApi {
 
         controller.signal.onabort = finish;
 
-        const payload: ConverseCommandInput = {
+
+
+
+        let payload: ConverseCommandInput = {
           modelId: modelID,
           ...(requestPayload.system ? { system: [{ text: requestPayload.system }] } : [{ text: "." }]),
           messages: requestPayload.messages,
           inferenceConfig: {
             maxTokens: requestPayload.max_tokens,
             temperature: requestPayload.temperature,
-            topP: requestPayload.top_p
+            topP: requestPayload.top_p,
+
           }
         }
+     
+        console.log("tools", tools);
+        const _tools=tools[0]
+        if (tools && tools.length > 0) {
+          const toolConfig = {
+            tools: _tools.map((tool: any) => {
+              return {
+                  toolSpec: {
+                    name: tool.name, // Replace hyphens with underscores
+                    description: tool.description || tool.function.name,
+                    inputSchema: {
+                      json: tool.inputSchema
+                    }
+                  }
+                };
+             
+             
+            }).filter(Boolean)
+          };
+          console.log("toolConfig", toolConfig);
+          if (toolConfig.tools.length > 0) {
+            payload.toolConfig = toolConfig;
+          }
+        }
+
+        //payload.toolConfig = toolConfig
+
         // console.log(payload, ".............")
         const response = await client.converseStream(payload);
-
+        let invokeTool=false
         try {
           // Send the command to the model and wait for the response
           // Extract and print the streamed response text in real-time.
           let result = ""
+          let toolUse = {name:"",toolUseId:"",input:""}
+          let chunk=false
+          let input=""
           for await (const item of response.stream ?? []) {
             if (item.contentBlockDelta) {
-              //console.log(item.contentBlockDelta.delta?.text);
-              remainText += item.contentBlockDelta.delta?.text
+              if (chunk) {
+                input += item.contentBlockDelta.delta?.toolUse?.input
+              }
+              else {
+                remainText += item.contentBlockDelta.delta?.text
+              }
+              
+            }
+            else if (item.contentBlockStart) {
+              chunk=true
+              if (item.contentBlockStart.start?.toolUse) {
+                console.log("toolUse", item.contentBlockStart.start?.toolUse);
+                toolUse = {
+                  name: item.contentBlockStart.start?.toolUse?.name || "",
+                  toolUseId: item.contentBlockStart.start?.toolUse?.toolUseId || "",
+                  input: ""
+                }
+              }
+            }
+            else if (item.contentBlockStop) {
+              chunk=false
+              toolUse["input"]=input
+              console.log("toolUse", toolUse);
+            }else if(item.messageStop?.stopReason==="tool_use") {
+              invokeTool=true
+            }
+
+            else {
+              console.log("Unhandled stream item:", item);
             }
           }
-          console.log("result:", remainText)
+         
+          if (invokeTool) {
+            console.log("invokeTool", toolUse)
+            options.invokeTool?.(toolUse.name, toolUse.input, async (response: any) => {
+              console.log("invokeTool response", response)
+              
+              // Create new payload with tool results
+              payload.messages?.push({
+                "role": "assistant",
+                        "content": [
+                            {
+                              "text": "I'll help you search for movies about robots using the search_movies function."
+
+                            },
+                            {
+                              "toolUse": {
+                                "toolUseId": toolUse.toolUseId,
+                                "name": toolUse.name,
+                                "input": JSON.parse(toolUse.input)
+                            }
+
+                            }
+                        ]
+              })
+
+
+
+              payload.messages?.push({
+                "role": "user",
+                        "content": [
+                            {
+                              toolResult : {
+                                "toolUseId": toolUse.toolUseId,
+                                "content": [{"json":  {"tool_result":response.content[0].text}}],
+                            }
+
+                            }
+                        ]
+              })
+              const toolResultPayload: ConverseCommandInput = {
+                ...payload,
+                
+              };
+
+              // Make another API call with tool results
+              const toolResponse = await client.converseStream(toolResultPayload);
+              
+              // Handle the new stream response
+              let toolResponseText = ""
+              for await (const item of toolResponse.stream ?? []) {
+                if (item.contentBlockDelta?.delta?.text) {
+                  toolResponseText += item.contentBlockDelta.delta.text;
+                }
+                //console.log("toolResponse", item)
+              }
+              //console.log("toolResponseText", toolResponseText)
+              options.onFinish(toolResponseText, metrics);
+              finish();
+            });
+          }
+
+          
           finish()
         } catch (err) {
           finish()
           console.log(`ERROR: Can't invoke '${modelID}'. Reason: ${err}`);
         }
+
+       
 
 
       } else {
@@ -514,7 +634,8 @@ export class ClaudeApi implements LLMApi {
           inferenceConfig: {
             maxTokens: requestPayload.max_tokens,
             temperature: requestPayload.temperature,
-            topP: requestPayload.top_p
+            topP: requestPayload.top_p,
+            ...(tools && tools.length > 0 && { tools })
           }
         }
 

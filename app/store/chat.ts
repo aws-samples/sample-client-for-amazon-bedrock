@@ -475,10 +475,12 @@ export const useChatStore = createPersistStore(
         get().summarizeSession();
       },
 
-      async onUserInput(
+      async   onUserInput(
         content: string,
         attachImages: string[],
-        attachFile?: AttachmentDocument
+        attachFile?: AttachmentDocument,
+        tools?: any,
+        invokeTool?: (name: string, input: string, callback?: (response: any) => void) => void
       ) {
         const session = get().currentSession();
         const modelConfig = session.mask.modelConfig;
@@ -548,6 +550,8 @@ export const useChatStore = createPersistStore(
         //   ]);
         // }
 
+        
+        
         let userMessage: ChatMessage = createMessage({
           role: "user",
           content: mContent,
@@ -592,6 +596,8 @@ export const useChatStore = createPersistStore(
         // make request
         api.llm.chat({
           messages: sendMessages,
+          tools: tools,
+          invokeTool: invokeTool,
           config: { ...modelConfig, stream: true },
           onUpdate(message) {
             botMessage.streaming = true;

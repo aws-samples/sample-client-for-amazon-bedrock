@@ -48,11 +48,13 @@ export interface LLMConfig {
 export interface ChatOptions {
   messages: RequestMessage[];
   config: LLMConfig;
+  tools?: any;
 
   onUpdate?: (message: string, chunk: string) => void;
   onFinish: (message: string, metrics?: object) => void;
   onError?: (err: Error) => void;
   onController?: (controller: AbortController) => void;
+  invokeTool?: (name: string, input: string, callback?: (response: any) => void) => void;
 }
 
 export interface LLMUsage {

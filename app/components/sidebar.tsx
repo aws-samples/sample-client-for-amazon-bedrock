@@ -5,10 +5,9 @@ import styles from "./home.module.scss";
 import { IconButton } from "./button";
 import SettingsIcon from "../icons/settings.svg";
 import GithubIcon from "../icons/github.svg";
-import ChatGptIcon from "../icons/chatgpt.svg";
 import BedrockIcon from "../icons/bedrock_32.svg";
 import AddIcon from "../icons/add.svg";
-import CloseIcon from "../icons/close.svg";
+import LightningIcon from "../icons/lightning.svg";
 import DeleteIcon from "../icons/delete.svg";
 import MaskIcon from "../icons/mask.svg";
 import PluginIcon from "../icons/plugin.svg";
@@ -239,10 +238,16 @@ export function SideBar(props: { className?: string }) {
             </Link>
           </div>
           <div className={styles["sidebar-action"]}>
+            <Link to={Path.MCP}>
+              <IconButton icon={<LightningIcon />} shadow /> 
+            </Link>
+          </div>
+          <div className={styles["sidebar-action"]}>
             <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
-              <IconButton icon={<GithubIcon />} shadow />
+              <IconButton icon={<GithubIcon />} shadow /> 
             </a>
           </div>
+          
         </div>
         <div>
           <IconButton
