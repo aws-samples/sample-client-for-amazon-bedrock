@@ -114,6 +114,8 @@ export class BRProxyApi implements LLMApi {
       if (shouldStream) {
         let responseText = "";
         let remainText = "";
+        let contentStarted = false;
+        let thinkingIncluded = false;
         let finished = false;
 
         // animate response to make it looks smooth
@@ -204,8 +206,14 @@ export class BRProxyApi implements LLMApi {
                   };
                 }>;
               };
-              if (responseText.length === 0 && json.choices[0]?.delta?.reasoning_content !== null) {
+
+              if (responseText.length === 0 && json.choices[0]?.delta?.reasoning_content !== undefined) {
                 responseText += "> Think: \n> ";
+                thinkingIncluded = true;
+              }
+              if (!contentStarted && json.choices[0]?.delta?.content && thinkingIncluded) {
+                contentStarted = true;
+                responseText += "\n"
               }
               const delta_think = json.choices[0]?.delta?.reasoning_content;
               const delta = json.choices[0]?.delta?.content;
