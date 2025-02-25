@@ -492,7 +492,7 @@ export class ClaudeApi implements LLMApi {
           }
         }
         console.log("requestPayload.model", requestPayload.model)
-        if (requestPayload.model === "claude-3.7-sonnet") {
+        if (requestPayload.model === "claude-3.7-sonnet" && requestPayload.reasoning_config?.type === "enabled") {
           payload.additionalModelRequestFields = { "reasoning_config": requestPayload.reasoning_config }
         }
         const response = await client.converseStream(payload);
