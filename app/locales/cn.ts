@@ -401,6 +401,18 @@ const cn = {
       Title: "频率惩罚度 (frequency_penalty)",
       SubTitle: "值越大，越有可能降低重复字词",
     },
+    Reasoning: {
+      Title: "推理配置",
+      SubTitle: "配置 Claude 3.7 的推理设置",
+      Type: {
+        Enabled: "启用",
+        Disabled: "禁用"
+      }
+    },
+    ReasoningBudget: {
+      Title: "推理预算",
+      SubTitle: "设置推理所用的最大 token 数"
+    },
   },
   Store: {
     DefaultTopic: "新的聊天",
