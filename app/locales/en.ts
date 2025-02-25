@@ -416,8 +416,8 @@ const en: LocaleType = {
       },
     },
     ReasoningBudget: {
-      Title: "推理预算",
-      SubTitle: "设置推理所用的最大 token 数"
+      Title: "Reasoning Budget",
+      SubTitle: "Set the maximum number of tokens for reasoning"
     },
   },
   Store: {

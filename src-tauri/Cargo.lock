@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "Sample-Client-for-Amazon-Bedrock"
-version = "1.2.3"
+version = "1.2.6"
 dependencies = [
  "serde",
  "serde_json",
