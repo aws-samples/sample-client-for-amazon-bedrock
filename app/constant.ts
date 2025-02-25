@@ -156,6 +156,18 @@ export const DEFAULT_MODELS = [
       providerType: "aws",
     },
   },
+  {
+    name: "claude-3.7-sonnet",
+    available: true,
+    modelId: "anthropic.claude-3-7-sonnet-20250219-v1:0",
+    anthropic_version: "bedrock-2023-05-31",
+    displayName: "Claude3.7 sonnet",
+    provider: {
+      id: "aws",
+      providerName: "AWS",
+      providerType: "aws",
+    },
+  },
 ] as const;
 
 export const CHAT_PAGE_SIZE = 15;
