@@ -284,8 +284,17 @@ export class ClaudeApi implements LLMApi {
       temperature: modelConfig.temperature,
       max_tokens: modelConfig.max_tokens,
       anthropic_version: model_version,
+      model: modelConfig.model
     };
-
+    console.log("modelConfig", modelConfig)
+    // check if modelConfig.model is claude-3-7-sonnet
+    if (requestPayload.model === "claude-3.7-sonnet") {
+      requestPayload.reasoning_config = modelConfig.reasoning_config
+    }
+    if (requestPayload.reasoning_config?.type === "enabled") {
+      requestPayload.top_p = undefined
+      requestPayload.temperature = 1
+    }
     return requestPayload;
   }
 
@@ -472,7 +481,6 @@ export class ClaudeApi implements LLMApi {
         };
 
         controller.signal.onabort = finish;
-
         const payload: ConverseCommandInput = {
           modelId: modelID,
           ...(requestPayload.system ? { system: [{ text: requestPayload.system }] } : [{ text: "." }]),
@@ -483,20 +491,48 @@ export class ClaudeApi implements LLMApi {
             topP: requestPayload.top_p
           }
         }
-        // console.log(payload, ".............")
+        console.log("requestPayload.model", requestPayload.model)
+        if (requestPayload.model === "claude-3.7-sonnet") {
+          payload.additionalModelRequestFields = { "reasoning_config": requestPayload.reasoning_config }
+        }
         const response = await client.converseStream(payload);
 
         try {
           // Send the command to the model and wait for the response
           // Extract and print the streamed response text in real-time.
           let result = ""
+          let isInReasoning = requestPayload.reasoning_config?.type === "enabled";
+
           for await (const item of response.stream ?? []) {
-            if (item.contentBlockDelta) {
-              //console.log(item.contentBlockDelta.delta?.text);
-              remainText += item.contentBlockDelta.delta?.text
-            }
+              if (item.contentBlockDelta) {
+                  // process reasoning content
+                  if (item.contentBlockDelta.delta?.reasoningContent?.text) {          
+                      console.log("reasoning", item.contentBlockDelta.delta.reasoningContent.text)            
+                      let text = item.contentBlockDelta.delta.reasoningContent.text;
+                      // if is the first content, add reasoning start
+                      if (!remainText.length) {
+                          remainText += '> ';
+                      }
+                      
+                      // process text with newline
+                      if (text.includes('\n')) {
+                          text = text.split('\n').join('\n> ');
+                      }
+                      
+                      remainText += text;
+                  }
+                  // process result content
+                  if (item.contentBlockDelta.delta?.text) {
+                      console.log("result", item.contentBlockDelta.delta.text)
+                      // if is in reasoning, add a newline
+                      if (isInReasoning) {
+                          remainText += '\n\n';
+                          isInReasoning = false;
+                      }
+                      remainText += item.contentBlockDelta.delta.text;
+                  }
+              }
           }
-          console.log("result:", remainText)
           finish()
         } catch (err) {
           finish()

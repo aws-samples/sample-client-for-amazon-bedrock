@@ -216,8 +216,6 @@ const createIDBStorage = () => {
       }
     },
     setItem: async (name: string, value: any): Promise<void> => {
-      console.log("save for key:", name)
-      // console.log("   value  :", value)
       const theState = value.state
       const { currentSessionIndex, lastAction, sessions } = theState
 
