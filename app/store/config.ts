@@ -58,6 +58,10 @@ export const DEFAULT_CONFIG = {
     compressMessageLengthThreshold: 1000,
     enableInjectSystemPrompts: true,
     template: DEFAULT_INPUT_TEMPLATE,
+    reasoning_config: {
+      type: "enabled",
+      budget_tokens: 1000,
+    },
   },
 };
 
@@ -96,6 +100,13 @@ export const ModalConfigValidator = {
   },
   top_p(x: number) {
     return limitNumber(x, 0, 1, 1);
+  },
+  reasoning_config(x: any, model: string) {
+    console.log("reasoning_config", x, model);
+    if (model !== "claude-3.7-sonnet") {
+      return undefined;
+    }
+    return x;
   },
 };
 

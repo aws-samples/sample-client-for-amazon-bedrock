@@ -1,13 +1,15 @@
 import { trimTopic, getMessageTextContent } from "../utils";
 
-import { get as idb_get, 
-          set as idb_set,
-          setMany as idb_setMany,
-          del as idb_del, 
-          values as idb_values, 
-          clear as idb_clear,
-          createStore as idb_createStore, 
-          set} from 'idb-keyval' // can use anything: IndexedDB, Ionic Storage, etc.
+import {
+  get as idb_get,
+  set as idb_set,
+  setMany as idb_setMany,
+  del as idb_del,
+  values as idb_values,
+  clear as idb_clear,
+  createStore as idb_createStore,
+  set
+} from 'idb-keyval' // can use anything: IndexedDB, Ionic Storage, etc.
 import { createJSONStorage, StateStorage } from 'zustand/middleware'
 
 import Locale, { getLang } from "../locales";
@@ -164,7 +166,7 @@ const createIDBStorage = () => {
   console.log("Creating IDBStorage")
   if (typeof indexedDB === "undefined") {
     global.indexedDB = fakeIndexedDB;
-  }  
+  }
   const idbChatSessionStore = idb_createStore('brclient-chat-store', 'sessions-store');
   const idbChatStorage: StateStorage = {
     getItem: async (name: string): Promise<any> => {
@@ -189,7 +191,7 @@ const createIDBStorage = () => {
 
           const migrateSessions: ChatSession[] = []
           sessionsHistory.map(itemOld => {
-            if (!sessions.find(item =>  item.id == itemOld.id)) {
+            if (!sessions.find(item => item.id == itemOld.id)) {
               migrateSessions.push(itemOld);
             }
           })
@@ -214,8 +216,6 @@ const createIDBStorage = () => {
       }
     },
     setItem: async (name: string, value: any): Promise<void> => {
-      console.log("save for key:", name)
-      // console.log("   value  :", value)
       const theState = value.state
       const { currentSessionIndex, lastAction, sessions } = theState
 
@@ -508,8 +508,8 @@ export const useChatStore = createPersistStore(
           );
         }
 
-       
-        if (attachFile){
+
+        if (attachFile) {
           console.log(`have attachFile ${attachFile.name}`,)
           mContent = [
             {
@@ -519,8 +519,8 @@ export const useChatStore = createPersistStore(
           ];
           mContent = mContent.concat([
             {
-              type:"doc",
-              doc:attachFile,
+              type: "doc",
+              doc: attachFile,
             }]);
         }
 
@@ -604,7 +604,7 @@ export const useChatStore = createPersistStore(
             });
           },
           onFinish(message, metrics) {
-            console.log("[Chat response finished]: ", message);
+            // console.log("[Chat response finished]: ", message);
             botMessage.streaming = false;
             if (message) {
               botMessage.content = message;

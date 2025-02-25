@@ -407,6 +407,18 @@ const en: LocaleType = {
       SubTitle:
         "A larger value decreasing the likelihood to repeat the same line",
     },
+    Reasoning: {
+      Title: "Reasoning",
+      SubTitle: "Configure the reasoning settings",
+      Type: {
+        Enabled: "Enabled",
+        Disabled: "Disabled"
+      },
+    },
+    ReasoningBudget: {
+      Title: "推理预算",
+      SubTitle: "设置推理所用的最大 token 数"
+    },
   },
   Store: {
     DefaultTopic: "New Conversation",

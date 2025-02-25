@@ -276,6 +276,63 @@ export function ModelConfigList(props: {
           }
         ></input>
       </ListItem>
+      {/* 添加 Reasoning Config 配置项 */}
+      {props.modelConfig.model === "claude-3.7-sonnet" && (
+        <>
+          <ListItem
+            title={Locale.Settings.Reasoning.Title}
+            subTitle={Locale.Settings.Reasoning.SubTitle}
+          >
+            <Select
+              value={props.modelConfig.reasoning_config?.type || "disabled"}
+              onChange={(e) => {
+                console.log('Selected reasoning type:', e.currentTarget.value);
+                props.updateConfig((config) => {
+                  if (!config.reasoning_config) {
+                    config.reasoning_config = {
+                      type: e.currentTarget.value as "enabled" | "disabled",
+                      budget_tokens: Math.min(1024, config.max_tokens)
+                    };
+                  } else {
+                    config.reasoning_config.type = e.currentTarget.value as "enabled" | "disabled";
+                  }
+                });
+              }}
+            >
+              <option value="enabled">{Locale.Settings.Reasoning.Type.Enabled}</option>
+              <option value="disabled">{Locale.Settings.Reasoning.Type.Disabled}</option>
+            </Select>
+          </ListItem>
+
+          {props.modelConfig.reasoning_config?.type === "enabled" && (
+            <ListItem
+              title={Locale.Settings.ReasoningBudget.Title}
+              subTitle={Locale.Settings.ReasoningBudget.SubTitle}
+            >
+              <input
+                type="number"
+                min={0}
+                max={props.modelConfig.max_tokens}
+                value={props.modelConfig.reasoning_config?.budget_tokens || Math.min(1024, props.modelConfig.max_tokens - 1)}
+                onChange={(e) => {
+                  console.log('Selected budget tokens:', e.currentTarget.value);
+                  const value = parseInt(e.currentTarget.value);
+                  props.updateConfig(
+                    (config) => {
+                      if (config.reasoning_config) {
+                        config.reasoning_config.budget_tokens = Math.min(
+                          value,
+                          config.max_tokens - 1
+                        );
+                      }
+                    }
+                  );
+                }}
+              />
+            </ListItem>
+          )}
+        </>
+      )}
     </>
   );
 }
