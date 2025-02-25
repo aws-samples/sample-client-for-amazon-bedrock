@@ -500,39 +500,41 @@ export class ClaudeApi implements LLMApi {
         try {
           // Send the command to the model and wait for the response
           // Extract and print the streamed response text in real-time.
-          let result = ""
-          let isInReasoning = requestPayload.reasoning_config?.type === "enabled";
+          let index = 1;
+          let think_end = false;
 
           for await (const item of response.stream ?? []) {
-              if (item.contentBlockDelta) {
-                  // process reasoning content
-                  if (item.contentBlockDelta.delta?.reasoningContent?.text) {          
-                      console.log("reasoning", item.contentBlockDelta.delta.reasoningContent.text)            
-                      let text = item.contentBlockDelta.delta.reasoningContent.text;
-                      // if is the first content, add reasoning start
-                      if (!remainText.length) {
-                          remainText += '> ';
-                      }
-                      
-                      // process text with newline
-                      if (text.includes('\n')) {
-                          text = text.split('\n').join('\n> ');
-                      }
-                      
-                      remainText += text;
-                  }
-                  // process result content
-                  if (item.contentBlockDelta.delta?.text) {
-                      console.log("result", item.contentBlockDelta.delta.text)
-                      // if is in reasoning, add a newline
-                      if (isInReasoning) {
-                          remainText += '\n\n';
-                          isInReasoning = false;
-                      }
-                      remainText += item.contentBlockDelta.delta.text;
-                  }
+            if (item.contentBlockDelta) {
+              const thinkingContent = item.contentBlockDelta.delta?.reasoningContent?.text;
+              const content = item.contentBlockDelta.delta?.text;
+              
+              // 处理思考内容
+              if (thinkingContent && index == 1) {
+                // 添加思考部分开始标记，使用引用格式
+                remainText += "> **Think:**\n> ";
               }
+              
+              if (thinkingContent) {
+                // 处理思考内容中的回车，确保每一行都有 > 前缀
+                const formattedThinking = thinkingContent.replace(/\n/g, '\n> ');
+                remainText += formattedThinking;
+              }
+              
+              // 处理思考内容结束和正文内容开始
+              if (content && index > 1 && !think_end) {
+                think_end = true;
+                // 添加思考部分结束和正文部分开始的分隔
+                remainText += "\n\n"; // 结束思考部分的引用
+              }
+              
+              if (content) {
+                remainText += content;
+              }
+              
+              index++;
+            }
           }
+          
           finish()
         } catch (err) {
           finish()
