@@ -213,7 +213,7 @@ export class BRProxyApi implements LLMApi {
               }
               if (!contentStarted && json.choices[0]?.delta?.content && thinkingIncluded) {
                 contentStarted = true;
-                responseText += "\n"
+                responseText += "\n\n";
               }
               const delta_think = json.choices[0]?.delta?.reasoning_content;
               const delta = json.choices[0]?.delta?.content;
