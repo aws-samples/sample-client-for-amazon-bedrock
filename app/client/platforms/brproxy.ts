@@ -207,13 +207,13 @@ export class BRProxyApi implements LLMApi {
                 }>;
               };
 
-              if (responseText.length === 0 && json.choices[0]?.delta?.reasoning_content !== undefined) {
+              if (responseText.length === 0 && json.choices[0]?.delta?.reasoning_content) {
                 responseText += "> Think: \n> ";
                 thinkingIncluded = true;
               }
               if (!contentStarted && json.choices[0]?.delta?.content && thinkingIncluded) {
                 contentStarted = true;
-                responseText += "\n\n";
+                remainText += "\n\n";
               }
               const delta_think = json.choices[0]?.delta?.reasoning_content;
               const delta = json.choices[0]?.delta?.content;
