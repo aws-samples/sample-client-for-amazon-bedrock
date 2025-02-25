@@ -508,33 +508,29 @@ export class ClaudeApi implements LLMApi {
               const thinkingContent = item.contentBlockDelta.delta?.reasoningContent?.text;
               const content = item.contentBlockDelta.delta?.text;
               
-              // 处理思考内容
+              // process thinking content
               if (thinkingContent && index == 1) {
-                // 添加思考部分开始标记，使用引用格式
+                // add thinking start
                 remainText += "> **Think:**\n> ";
               }
               
               if (thinkingContent) {
-                // 处理思考内容中的回车，确保每一行都有 > 前缀
+                // process thinking content and add > prefix
                 const formattedThinking = thinkingContent.replace(/\n/g, '\n> ');
                 remainText += formattedThinking;
               }
-              
-              // 处理思考内容结束和正文内容开始
+              // process thinking end
               if (content && index > 1 && !think_end) {
                 think_end = true;
-                // 添加思考部分结束和正文部分开始的分隔
-                remainText += "\n\n"; // 结束思考部分的引用
+                // add thinking end
+                remainText += "\n\n"; 
               }
-              
               if (content) {
                 remainText += content;
               }
-              
               index++;
             }
           }
-          
           finish()
         } catch (err) {
           finish()

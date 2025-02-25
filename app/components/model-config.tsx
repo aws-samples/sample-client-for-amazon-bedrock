@@ -311,8 +311,8 @@ export function ModelConfigList(props: {
             >
               <input
                 type="number"
-                min={0}
-                max={props.modelConfig.max_tokens}
+                min={1024}
+                max={props.modelConfig.max_tokens - 1}
                 value={props.modelConfig.reasoning_config?.budget_tokens || Math.min(1024, props.modelConfig.max_tokens - 1)}
                 onChange={(e) => {
                   console.log('Selected budget tokens:', e.currentTarget.value);
