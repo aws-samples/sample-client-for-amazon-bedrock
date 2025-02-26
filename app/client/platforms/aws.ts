@@ -500,38 +500,36 @@ export class ClaudeApi implements LLMApi {
         try {
           // Send the command to the model and wait for the response
           // Extract and print the streamed response text in real-time.
-          let result = ""
-          let isInReasoning = requestPayload.reasoning_config?.type === "enabled";
+          let index = 1;
+          let think_end = false;
 
           for await (const item of response.stream ?? []) {
-              if (item.contentBlockDelta) {
-                  // process reasoning content
-                  if (item.contentBlockDelta.delta?.reasoningContent?.text) {          
-                      console.log("reasoning", item.contentBlockDelta.delta.reasoningContent.text)            
-                      let text = item.contentBlockDelta.delta.reasoningContent.text;
-                      // if is the first content, add reasoning start
-                      if (!remainText.length) {
-                          remainText += '> ';
-                      }
-                      
-                      // process text with newline
-                      if (text.includes('\n')) {
-                          text = text.split('\n').join('\n> ');
-                      }
-                      
-                      remainText += text;
-                  }
-                  // process result content
-                  if (item.contentBlockDelta.delta?.text) {
-                      console.log("result", item.contentBlockDelta.delta.text)
-                      // if is in reasoning, add a newline
-                      if (isInReasoning) {
-                          remainText += '\n\n';
-                          isInReasoning = false;
-                      }
-                      remainText += item.contentBlockDelta.delta.text;
-                  }
+            if (item.contentBlockDelta) {
+              const thinkingContent = item.contentBlockDelta.delta?.reasoningContent?.text;
+              const content = item.contentBlockDelta.delta?.text;
+              
+              // process thinking content
+              if (thinkingContent && index == 1) {
+                // add thinking start
+                remainText += "> **Think:**\n> ";
               }
+              
+              if (thinkingContent) {
+                // process thinking content and add > prefix
+                const formattedThinking = thinkingContent.replace(/\n/g, '\n> ');
+                remainText += formattedThinking;
+              }
+              // process thinking end
+              if (content && index > 1 && !think_end) {
+                think_end = true;
+                // add thinking end
+                remainText += "\n\n"; 
+              }
+              if (content) {
+                remainText += content;
+              }
+              index++;
+            }
           }
           finish()
         } catch (err) {

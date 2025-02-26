@@ -60,7 +60,7 @@ export const DEFAULT_CONFIG = {
     template: DEFAULT_INPUT_TEMPLATE,
     reasoning_config: {
       type: "enabled",
-      budget_tokens: 1000,
+      budget_tokens: 1024,
     },
   },
 };
