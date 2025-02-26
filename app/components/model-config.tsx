@@ -320,9 +320,9 @@ export function ModelConfigList(props: {
                   props.updateConfig(
                     (config) => {
                       if (config.reasoning_config) {
-                        config.reasoning_config.budget_tokens = Math.min(
-                          value,
-                          config.max_tokens - 1
+                        config.reasoning_config.budget_tokens = Math.max(
+                          1024,
+                          Math.min(value, config.max_tokens - 1)
                         );
                       }
                     }
