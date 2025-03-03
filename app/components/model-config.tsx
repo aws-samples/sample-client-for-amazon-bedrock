@@ -2,7 +2,7 @@ import {
   ModalConfigValidator, ModelConfig, useAppConfig, useAccessStore,
 } from "../store";
 import { getServerSideConfig } from "../config/server";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Locale from "../locales";
 import { InputRange } from "./input-range";
 import { ListItem, Select } from "./ui-lib";
@@ -12,6 +12,19 @@ import ResetIcon from "../icons/reload.svg";
 import { LLMModel } from "../client/api";
 import { DEFAULT_MODELS } from "@/app/constant";
 
+// 每个模型的特定配置定义
+const MODEL_SPECIFIC_CONFIGS = {
+  "claude-3.7-sonnet": {
+    hasReasoning: true,
+  },
+};
+
+// 默认配置
+const DEFAULT_MODEL_CONFIG = {
+  hasReasoning: false,
+  hasTopK: false,
+};
+
 export function ModelConfigList(props: {
   modelConfig: ModelConfig;
   updateConfig: (updater: (config: ModelConfig) => void) => void;
@@ -20,6 +33,37 @@ export function ModelConfigList(props: {
   const accessStore = useAccessStore();
 
   const { provider, useBRProxy, BRProxyUrl, openaiApiKey } = accessStore;
+
+  // 获取当前模型的特定配置
+  const getModelConfig = (modelName: string) => {
+    // 查找完全匹配
+    if (MODEL_SPECIFIC_CONFIGS[modelName as keyof typeof MODEL_SPECIFIC_CONFIGS]) {
+      return {
+        ...DEFAULT_MODEL_CONFIG,
+        ...MODEL_SPECIFIC_CONFIGS[modelName as keyof typeof MODEL_SPECIFIC_CONFIGS]
+      };
+    }
+    
+    // 查找部分匹配
+    for (const key in MODEL_SPECIFIC_CONFIGS) {
+      if (modelName.includes(key)) {
+        return {
+          ...DEFAULT_MODEL_CONFIG,
+          ...MODEL_SPECIFIC_CONFIGS[key as keyof typeof MODEL_SPECIFIC_CONFIGS]
+        };
+      }
+    }
+    
+    // 没有匹配，返回默认配置
+    return { ...DEFAULT_MODEL_CONFIG };
+  };
+  
+  const [modelSpecificConfig, setModelSpecificConfig] = useState(getModelConfig(props.modelConfig.model));
+  
+  // 当模型变化时更新特定配置
+  useEffect(() => {
+    setModelSpecificConfig(getModelConfig(props.modelConfig.model));
+  }, [props.modelConfig.model]);
 
   useEffect(() => {
     const storedModels: LLMModel[] = appConfig.models;
@@ -47,6 +91,8 @@ export function ModelConfigList(props: {
                   e.currentTarget.value,
                 )),
               );
+              // 更新模型特定配置
+              setModelSpecificConfig(getModelConfig(e.currentTarget.value));
             }}
           >
             {appConfig.models
@@ -132,6 +178,27 @@ export function ModelConfigList(props: {
           }}
         ></InputRange>
       </ListItem>
+      {modelSpecificConfig.hasTopK && (
+        <ListItem
+          title={Locale.Settings.TopK.Title}
+          subTitle={Locale.Settings.TopK.SubTitle}
+        >
+          <input
+            type="number"
+            min={0}
+            max={500}
+            value={props.modelConfig.top_k}
+            onChange={(e) =>
+              props.updateConfig(
+                (config) => 
+                  (config.top_k = ModalConfigValidator.top_k(
+                    e.currentTarget.valueAsNumber,
+                  )),
+              )
+            }
+          ></input>
+        </ListItem>
+      )}
       <ListItem
         title={Locale.Settings.MaxTokens.Title}
         subTitle={Locale.Settings.MaxTokens.SubTitle}
@@ -151,84 +218,38 @@ export function ModelConfigList(props: {
           }
         ></input>
       </ListItem>
+      <ListItem
+        title={Locale.Settings.InjectSystemPrompts.Title}
+        subTitle={Locale.Settings.InjectSystemPrompts.SubTitle}
+      >
+        <input
+          type="checkbox"
+          checked={props.modelConfig.enableInjectSystemPrompts}
+          onChange={(e) =>
+            props.updateConfig(
+              (config) =>
+              (config.enableInjectSystemPrompts =
+                e.currentTarget.checked),
+            )
+          }
+        ></input>
+      </ListItem>
 
-      {props.modelConfig.model.startsWith("gemini") ? null : (
-        <>
-          <ListItem
-            title={Locale.Settings.PresencePenalty.Title}
-            subTitle={Locale.Settings.PresencePenalty.SubTitle}
-          >
-            <InputRange
-              value={props.modelConfig.presence_penalty?.toFixed(1)}
-              min="-2"
-              max="2"
-              step="0.1"
-              onChange={(e) => {
-                props.updateConfig(
-                  (config) =>
-                  (config.presence_penalty =
-                    ModalConfigValidator.presence_penalty(
-                      e.currentTarget.valueAsNumber,
-                    )),
-                );
-              }}
-            ></InputRange>
-          </ListItem>
+      <ListItem
+        title={Locale.Settings.InputTemplate.Title}
+        subTitle={Locale.Settings.InputTemplate.SubTitle}
+      >
+        <input
+          type="text"
+          value={props.modelConfig.template}
+          onChange={(e) =>
+            props.updateConfig(
+              (config) => (config.template = e.currentTarget.value),
+            )
+          }
+        ></input>
+      </ListItem>
 
-          <ListItem
-            title={Locale.Settings.FrequencyPenalty.Title}
-            subTitle={Locale.Settings.FrequencyPenalty.SubTitle}
-          >
-            <InputRange
-              value={props.modelConfig.frequency_penalty?.toFixed(1)}
-              min="-2"
-              max="2"
-              step="0.1"
-              onChange={(e) => {
-                props.updateConfig(
-                  (config) =>
-                  (config.frequency_penalty =
-                    ModalConfigValidator.frequency_penalty(
-                      e.currentTarget.valueAsNumber,
-                    )),
-                );
-              }}
-            ></InputRange>
-          </ListItem>
-
-          <ListItem
-            title={Locale.Settings.InjectSystemPrompts.Title}
-            subTitle={Locale.Settings.InjectSystemPrompts.SubTitle}
-          >
-            <input
-              type="checkbox"
-              checked={props.modelConfig.enableInjectSystemPrompts}
-              onChange={(e) =>
-                props.updateConfig(
-                  (config) =>
-                  (config.enableInjectSystemPrompts =
-                    e.currentTarget.checked),
-                )
-              }
-            ></input>
-          </ListItem>
-
-          <ListItem
-            title={Locale.Settings.InputTemplate.Title}
-            subTitle={Locale.Settings.InputTemplate.SubTitle}
-          >
-            <input
-              type="text"
-              value={props.modelConfig.template}
-              onChange={(e) =>
-                props.updateConfig(
-                  (config) => (config.template = e.currentTarget.value),
-                )
-              }
-            ></input>
-          </ListItem>
-        </>
-      )}
       <ListItem
         title={Locale.Settings.HistoryCount.Title}
         subTitle={Locale.Settings.HistoryCount.SubTitle}
@@ -277,7 +298,7 @@ export function ModelConfigList(props: {
         ></input>
       </ListItem>
       {/* 添加 Reasoning Config 配置项 */}
-      {props.modelConfig.model === "claude-3.7-sonnet" && (
+      {modelSpecificConfig.hasReasoning && (
         <>
           <ListItem
             title={Locale.Settings.Reasoning.Title}
@@ -286,15 +307,16 @@ export function ModelConfigList(props: {
             <Select
               value={props.modelConfig.reasoning_config?.type || "disabled"}
               onChange={(e) => {
-                console.log('Selected reasoning type:', e.currentTarget.value);
+                const type = e.currentTarget.value as "enabled" | "disabled";
                 props.updateConfig((config) => {
+                  // 确保 reasoning_config 存在
                   if (!config.reasoning_config) {
                     config.reasoning_config = {
-                      type: e.currentTarget.value as "enabled" | "disabled",
-                      budget_tokens: Math.min(1024, config.max_tokens)
+                      type,
+                      budget_tokens: Math.min(1024, config.max_tokens - 1)
                     };
                   } else {
-                    config.reasoning_config.type = e.currentTarget.value as "enabled" | "disabled";
+                    config.reasoning_config.type = type;
                   }
                 });
               }}
@@ -313,20 +335,16 @@ export function ModelConfigList(props: {
                 type="number"
                 min={1024}
                 max={props.modelConfig.max_tokens - 1}
-                value={props.modelConfig.reasoning_config?.budget_tokens || Math.min(1024, props.modelConfig.max_tokens - 1)}
+                value={props.modelConfig.reasoning_config?.budget_tokens || 1024}
                 onChange={(e) => {
-                  console.log('Selected budget tokens:', e.currentTarget.value);
                   const value = parseInt(e.currentTarget.value);
-                  props.updateConfig(
-                    (config) => {
-                      if (config.reasoning_config) {
-                        config.reasoning_config.budget_tokens = Math.max(
-                          1024,
-                          Math.min(value, config.max_tokens - 1)
-                        );
-                      }
+                  const safeValue = Math.max(1024, Math.min(value, props.modelConfig.max_tokens - 1));
+                  
+                  props.updateConfig((config) => {
+                    if (config.reasoning_config) {
+                      config.reasoning_config.budget_tokens = safeValue;
                     }
-                  );
+                  });
                 }}
               />
             </ListItem>
