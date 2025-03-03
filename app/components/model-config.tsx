@@ -22,7 +22,6 @@ const MODEL_SPECIFIC_CONFIGS = {
 // 默认配置
 const DEFAULT_MODEL_CONFIG = {
   hasReasoning: false,
-  hasTopK: false,
 };
 
 export function ModelConfigList(props: {
@@ -178,27 +177,6 @@ export function ModelConfigList(props: {
           }}
         ></InputRange>
       </ListItem>
-      {modelSpecificConfig.hasTopK && (
-        <ListItem
-          title={Locale.Settings.TopK.Title}
-          subTitle={Locale.Settings.TopK.SubTitle}
-        >
-          <input
-            type="number"
-            min={0}
-            max={500}
-            value={props.modelConfig.top_k}
-            onChange={(e) =>
-              props.updateConfig(
-                (config) => 
-                  (config.top_k = ModalConfigValidator.top_k(
-                    e.currentTarget.valueAsNumber,
-                  )),
-              )
-            }
-          ></input>
-        </ListItem>
-      )}
       <ListItem
         title={Locale.Settings.MaxTokens.Title}
         subTitle={Locale.Settings.MaxTokens.SubTitle}
