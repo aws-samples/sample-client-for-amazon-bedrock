@@ -166,7 +166,6 @@ export class ClaudeApi implements LLMApi {
           new_contents.push(text_playload);
         } else {
           for (var j = 0; j < messages[i].content.length; j++) {
-
             if (
               (messages[i].content[j] as MultimodalContent).type === "image_url"
             ) {
@@ -275,7 +274,6 @@ export class ClaudeApi implements LLMApi {
     }
 
     // console.log("messages[0].role", messages[0].role)
-    console.log("modelConfig", modelConfig)
     const requestPayload: any = {
       ...(has_system_prompt ? { system: system_prompt } : {}),
       messages: new_messages,
@@ -498,7 +496,6 @@ export class ClaudeApi implements LLMApi {
         try {
           // Send the command to the model and wait for the response
           // Extract and print the streamed response text in real-time.
-          let index = 1;
           let think_end = false;
           let hasSeenThinking = false; // 跟踪是否已经看到过思考内容
           
