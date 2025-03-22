@@ -1,0 +1,52 @@
+name: "test-android-only"
+
+on: 
+  workflow_dispatch: # 允许手动触发
+
+# This workflow will only build the Android app for testing purposes
+
+jobs:
+  test-android:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install Node.js dependencies
+        run: yarn install
+
+      - name: Check Flutter version before setup
+        run: flutter --version || echo "Flutter not installed yet"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.2'
+          channel: 'stable'
+
+      - name: Verify Flutter version
+        run: flutter --version
+
+      - name: Install Flutter dependencies
+        run: |
+          cd flutter_app
+          flutter pub get
+
+      - name: Export web assets
+        run: yarn export
+
+      - name: Prepare Flutter assets
+        run: |
+          mkdir -p ./flutter_app/assets
+          zip -r ./flutter_app/assets/out.zip out
+
+      - name: Build Android APK
+        run: |
+          cd flutter_app
+          flutter build apk --release
