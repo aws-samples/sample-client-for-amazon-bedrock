@@ -24,6 +24,9 @@ jobs:
       - name: Check Flutter version before setup
         run: flutter --version || echo "Flutter not installed yet"
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
@@ -43,6 +46,7 @@ jobs:
         run: |
           cd flutter_app
           flutter clean
+          flutter pub cache repair
           flutter pub get
 
       - name: Export web assets
