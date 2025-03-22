@@ -18,7 +18,7 @@ import 'package:permission_handler/permission_handler.dart';
 final rand = Random();
 int portMin = 1024;
 int portMax = 65535;
-WebUri serverAddr = WebUri("http://localhost:8080");
+Uri serverAddr = Uri.parse("http://localhost:8080");
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,7 +58,7 @@ Future main() async {
     } on SocketException catch (e) {
       print(e);
       int port = portMin + rand.nextInt(portMax - portMin);
-      serverAddr = WebUri("http://localhost:$port");
+      serverAddr = Uri.parse("http://localhost:$port");
     }
   }
 
@@ -74,17 +74,6 @@ class MyApp extends StatefulWidget {
   @override
   State<MyApp> createState() => _MyAppState();
 }
-
-InAppWebViewSettings settings = InAppWebViewSettings(
-    useOnDownloadStart: true,
-    allowsBackForwardNavigationGestures: true,
-    javaScriptEnabled: true,
-    // useShouldOverrideUrlLoading: true,
-    // mediaPlaybackRequiresUserGesture: false,
-    // allowsInlineMediaPlayback: true,
-    // useHybridComposition: true,
-    // useOnLoadResource: true
-    );
 
 class _MyAppState extends State<MyApp> {
   final GlobalKey webViewKey = GlobalKey();
@@ -124,9 +113,9 @@ class _MyAppState extends State<MyApp> {
             Expanded(
               child: InAppWebView(
                 key: webViewKey,
-                initialUrlRequest: URLRequest(url: serverAddr),
+                initialUrl: serverAddr.toString(),
                 // initialFile:'assets/web/index.html',
-                initialSettings: settings,
+                // initialSettings: settings,
                 onWebViewCreated: (controller) {
                   webViewController = controller;
                   // webViewController?.loadFile(
@@ -137,15 +126,19 @@ class _MyAppState extends State<MyApp> {
                   //       true); // 启用调试模式
                   // }
                 },
-                onDownloadStartRequest: (controller, url) async {
+                onDownloadStart: (controller, url) async {
                   print("url================================"+url.toString());
-                  if (url.url.scheme == "data") {
-                    String? outputFile = await FilePicker.platform.saveFile(
-                        dialogTitle: 'Please select an output file:',
-                        fileName:
-                            'brclient_${DateTime.now().microsecondsSinceEpoch}.txt',
-                        bytes: url.url.data!.contentAsBytes());
-                    print("outputFile: $outputFile");
+                  if (url.startsWith("data:")) {
+                    // Handle data URL
+                    final dataUri = Uri.parse(url);
+                    if (dataUri.data != null) {
+                      String? outputFile = await FilePicker.platform.saveFile(
+                          dialogTitle: 'Please select an output file:',
+                          fileName:
+                              'brclient_${DateTime.now().microsecondsSinceEpoch}.txt',
+                          bytes: dataUri.data!.contentAsBytes());
+                      print("outputFile: $outputFile");
+                    }
                   }
                 },
                 onLongPressHitTestResult: (controller, hitTestResult) async {
