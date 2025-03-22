@@ -71,4 +71,153 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
-         
+
+  publish-android:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install Node.js dependencies
+        run: yarn install
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+
+      - name: Install Flutter dependencies
+        run: |
+          cd flutter_app
+          flutter pub get
+
+      - name: Export web assets
+        run: yarn export
+
+      - name: Prepare Flutter assets
+        run: |
+          mkdir -p ./flutter_app/assets
+          zip -r ./flutter_app/assets/out.zip out
+
+      - name: Build Android APK
+        run: |
+          cd flutter_app
+          flutter build apk --release
+
+      - name: Get app version
+        id: get_version
+        run: |
+          VERSION=$(grep -o '"version": "[^"]*' src-tauri/tauri.conf.json | cut -d'"' -f4)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Upload Android APK to release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: app-v${{ env.VERSION }}
+          files: flutter_app/build/app/outputs/flutter-apk/app-release.apk
+          draft: true
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-ios:
+    permissions:
+      contents: write
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install Node.js dependencies
+        run: yarn install
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+
+      - name: Install Flutter dependencies
+        run: |
+          cd flutter_app
+          flutter pub get
+
+      - name: Export web assets
+        run: yarn export
+
+      - name: Prepare Flutter assets
+        run: |
+          mkdir -p ./flutter_app/assets
+          zip -r ./flutter_app/assets/out.zip out
+
+      - name: Install Apple Certificate
+        if: env.APPLE_CERTIFICATE
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD || 'temporary_password' }}
+        run: |
+          # Create a temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+          
+          # Import certificate to keychain
+          echo $APPLE_CERTIFICATE | base64 --decode > certificate.p12
+          security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          
+          # Clean up
+          rm certificate.p12
+
+      - name: Build iOS IPA
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE != '' }}
+        run: |
+          cd flutter_app
+          if [ "$ENABLE_CODE_SIGNING" = "true" ]; then
+            # Build with code signing
+            flutter build ios --release --no-codesign
+            # Additional code signing steps can be added here if needed
+          else
+            # Build without code signing
+            flutter build ios --release --no-codesign
+          fi
+
+      - name: Create IPA file
+        run: |
+          cd flutter_app/build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload
+          zip -r Sample.Client.for.Amazon.Bedrock.ipa Payload
+
+      - name: Get app version
+        id: get_version
+        run: |
+          VERSION=$(grep -o '"version": "[^"]*' src-tauri/tauri.conf.json | cut -d'"' -f4)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Upload iOS IPA to release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: app-v${{ env.VERSION }}
+          files: flutter_app/build/ios/iphoneos/Sample.Client.for.Amazon.Bedrock.ipa
+          draft: true
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
