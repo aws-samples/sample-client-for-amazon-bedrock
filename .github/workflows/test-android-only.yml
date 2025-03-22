@@ -24,6 +24,12 @@ jobs:
       - name: Check Flutter version before setup
         run: flutter --version || echo "Flutter not installed yet"
 
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -33,9 +39,10 @@ jobs:
       - name: Verify Flutter version
         run: flutter --version
 
-      - name: Install Flutter dependencies
+      - name: Install Flutter dependencies with clean
         run: |
           cd flutter_app
+          flutter clean
           flutter pub get
 
       - name: Export web assets
