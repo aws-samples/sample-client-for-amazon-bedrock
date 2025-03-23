@@ -162,26 +162,31 @@ jobs:
           flutter-version: '3.29.2'
           channel: 'stable'
 
-      - name: Install Flutter dependencies
+      - name: Verify Flutter version
+        run: flutter --version
+
+      - name: Install Flutter dependencies with clean
         run: |
           cd flutter_app
           flutter clean
           flutter pub cache repair
           flutter pub get
 
+      # Use the exact same command as in package.json for consistency
+      - name: Build iOS app using package.json script pattern
+        run: |
+          # Export web assets
+          yarn export
+          
+          # Create assets directory and zip output
+          mkdir -p ./flutter_app/assets
+          zip -r ./flutter_app/assets/out.zip out
+
       - name: Install Cocoapods
         run: |
           sudo gem install cocoapods
           pod --version
 
-      - name: Export web assets
-        run: yarn export
-
-      - name: Prepare Flutter assets
-        run: |
-          mkdir -p ./flutter_app/assets
-          zip -r ./flutter_app/assets/out.zip out
-          
       - name: Prepare iOS build
         run: |
           cd flutter_app
@@ -191,6 +196,7 @@ jobs:
           rm -rf Pods Podfile.lock
           pod install --repo-update
 
+      # Optional: Setup code signing if secrets are available
       - name: Install Apple Certificate
         if: env.APPLE_CERTIFICATE != ''
         env:
@@ -219,64 +225,28 @@ jobs:
           # Clean up
           rm certificate.p12
 
-      - name: Build iOS IPA
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          ENABLE_CODE_SIGNING: ${{ env.APPLE_CERTIFICATE != '' }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      - name: Build iOS (Debug)
         run: |
           cd flutter_app
-          
-          # Build debug version (simpler and more reliable)
           flutter build ios --debug --no-codesign
-          
-          # List build directories for debugging
-          find . -type d -name "*Debug*" || echo "No Debug directories found"
-          find . -name "Runner.app" || echo "No Runner.app found"
-          ls -la build/ios/ || echo "No ios directory"
-          else
-            # Build without code signing
-            flutter build ios --release --no-codesign
-          fi
 
-      - name: Create IPA file
+      - name: List build directories
         run: |
-          # Create IPA manually
+          find flutter_app/build -type d -name "*Debug*" || echo "No Debug directories found"
+          find flutter_app/build -name "Runner.app" || echo "No Runner.app found"
+          ls -la flutter_app/build/ios/ || echo "No ios directory"
+
+      - name: Create Debug IPA
+        run: |
           mkdir -p flutter_app/build/ios/Debug-iphonesimulator/Payload
           find flutter_app/build -name "Runner.app" -type d | xargs -I{} cp -r {} flutter_app/build/ios/Debug-iphonesimulator/Payload/ || echo "Failed to copy Runner.app"
           cd flutter_app/build/ios/Debug-iphonesimulator
-          zip -r Sample.Client.for.Amazon.Bedrock.ipa Payload || echo "Failed to create zip"
-          cd -
-          
-          # Verify IPA was created successfully
-          ls -la flutter_app/build/ios/Debug-iphonesimulator/Sample.Client.for.Amazon.Bedrock.ipa || echo "IPA file not found"
+          zip -r debug-ios-app.zip Payload || echo "Failed to create zip"
 
-      - name: Get app version
-        id: get_version
-        run: |
-          VERSION=$(grep -o '"version": "[^"]*' src-tauri/tauri.conf.json | cut -d'"' -f4)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-
-      - name: Upload iOS IPA to release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: app-v${{ env.VERSION }}
-          files: flutter_app/build/ios/Debug-iphonesimulator/Sample.Client.for.Amazon.Bedrock.ipa
-          draft: true
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Upload build artifacts for debugging
-        if: always()
+      - name: Upload Debug IPA
         uses: actions/upload-artifact@v4
         with:
-          name: ios-build-artifacts
-          path: |
-            flutter_app/build/ios/Debug-iphonesimulator/
-            flutter_app/ios/Podfile.lock
-            flutter_app/ios/Flutter/Generated.xcconfig
-          retention-days: 3
+          name: ios-debug-app
+          path: flutter_app/build/ios/Debug-iphonesimulator/debug-ios-app.zip
+          retention-days: 7
           if-no-files-found: warn
