@@ -229,8 +229,14 @@ jobs:
         run: |
           cd flutter_app
           if [ "$ENABLE_CODE_SIGNING" = "true" ]; then
-            # Build with code signing
-            flutter build ios --release --no-codesign # Initial build
+            # Check code signing status
+            security find-identity -v -p codesigning || echo "No codesigning identities found"
+            
+            # Configure automatic signing in Xcode project
+            cd ios
+            /usr/libexec/PlistBuddy -c "Delete :Signing:ProvisioningProfiles" Runner.xcodeproj/project.pbxproj || true
+            /usr/libexec/PlistBuddy -c "Add :Signing:ProvisioningProfiles dict" Runner.xcodeproj/project.pbxproj || true
+            cd ..
             
             # Set up export options plist - using a different approach to avoid YAML issues
             echo '<?xml version="1.0" encoding="UTF-8"?>' > exportOptions.plist
@@ -241,8 +247,13 @@ jobs:
             echo '    <string>app-store</string>' >> exportOptions.plist
             echo '    <key>teamID</key>' >> exportOptions.plist
             echo '    <string>'${APPLE_TEAM_ID}'</string>' >> exportOptions.plist
+            echo '    <key>signingStyle</key>' >> exportOptions.plist
+            echo '    <string>automatic</string>' >> exportOptions.plist
             echo '</dict>' >> exportOptions.plist
             echo '</plist>' >> exportOptions.plist
+            
+            # Build with code signing
+            flutter build ios --release
             
             # Archive and export IPA using xcodebuild if possible
             cd ios
