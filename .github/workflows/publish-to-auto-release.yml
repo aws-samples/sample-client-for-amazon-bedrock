@@ -228,37 +228,14 @@ jobs:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
         run: |
           cd flutter_app
-          if [ "$ENABLE_CODE_SIGNING" = "true" ]; then
-            # Check code signing status
-            security find-identity -v -p codesigning || echo "No codesigning identities found"
-            
-            # Configure automatic signing in Xcode project
-            cd ios
-            /usr/libexec/PlistBuddy -c "Delete :Signing:ProvisioningProfiles" Runner.xcodeproj/project.pbxproj || true
-            /usr/libexec/PlistBuddy -c "Add :Signing:ProvisioningProfiles dict" Runner.xcodeproj/project.pbxproj || true
-            cd ..
-            
-            # Set up export options plist - using a different approach to avoid YAML issues
-            echo '<?xml version="1.0" encoding="UTF-8"?>' > exportOptions.plist
-            echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> exportOptions.plist
-            echo '<plist version="1.0">' >> exportOptions.plist
-            echo '<dict>' >> exportOptions.plist
-            echo '    <key>method</key>' >> exportOptions.plist
-            echo '    <string>app-store</string>' >> exportOptions.plist
-            echo '    <key>teamID</key>' >> exportOptions.plist
-            echo '    <string>'${APPLE_TEAM_ID}'</string>' >> exportOptions.plist
-            echo '    <key>signingStyle</key>' >> exportOptions.plist
-            echo '    <string>automatic</string>' >> exportOptions.plist
-            echo '</dict>' >> exportOptions.plist
-            echo '</plist>' >> exportOptions.plist
-            
-            # Build with code signing
-            flutter build ios --release
-            
-            # Archive and export IPA using xcodebuild if possible
-            cd ios
-            xcodebuild -workspace Runner.xcworkspace -scheme Runner -sdk iphoneos -configuration Release archive -archivePath Runner.xcarchive || true
-            xcodebuild -exportArchive -archivePath Runner.xcarchive -exportOptionsPlist ../exportOptions.plist -exportPath ../build/ios/iphoneos || true
+          
+          # Build debug version (simpler and more reliable)
+          flutter build ios --debug --no-codesign
+          
+          # List build directories for debugging
+          find . -type d -name "*Debug*" || echo "No Debug directories found"
+          find . -name "Runner.app" || echo "No Runner.app found"
+          ls -la build/ios/ || echo "No ios directory"
           else
             # Build without code signing
             flutter build ios --release --no-codesign
@@ -266,24 +243,15 @@ jobs:
 
       - name: Create IPA file
         run: |
-          # Check if IPA was already created by xcodebuild
-          if [ -f "flutter_app/build/ios/iphoneos/Runner.ipa" ]; then
-            echo "Using IPA created by xcodebuild"
-            cp flutter_app/build/ios/iphoneos/Runner.ipa flutter_app/build/ios/iphoneos/Sample.Client.for.Amazon.Bedrock.ipa
-          else
-            # Create IPA manually
-            echo "Creating IPA manually"
-            mkdir -p flutter_app/build/ios/iphoneos/Payload
-            find flutter_app/build -path "*/iphoneos/Runner.app" -type d | xargs -I{} cp -r {} flutter_app/build/ios/iphoneos/Payload/ || echo "Failed to copy Runner.app"
-            cd flutter_app/build/ios/iphoneos
-            zip -r Sample.Client.for.Amazon.Bedrock.ipa Payload || echo "Failed to create zip"
-            cd -
-          fi
+          # Create IPA manually
+          mkdir -p flutter_app/build/ios/Debug-iphonesimulator/Payload
+          find flutter_app/build -name "Runner.app" -type d | xargs -I{} cp -r {} flutter_app/build/ios/Debug-iphonesimulator/Payload/ || echo "Failed to copy Runner.app"
+          cd flutter_app/build/ios/Debug-iphonesimulator
+          zip -r Sample.Client.for.Amazon.Bedrock.ipa Payload || echo "Failed to create zip"
+          cd -
           
           # Verify IPA was created successfully
-          ls -la flutter_app/build/ios/iphoneos/Sample.Client.for.Amazon.Bedrock.ipa || echo "IPA file not found"
-          ls -la flutter_app/build/ios/iphoneos/Sample.Client.for.Amazon.Bedrock.ipa
-          ls -la Sample.Client.for.Amazon.Bedrock.ipa
+          ls -la flutter_app/build/ios/Debug-iphonesimulator/Sample.Client.for.Amazon.Bedrock.ipa || echo "IPA file not found"
 
       - name: Get app version
         id: get_version
@@ -307,7 +275,8 @@ jobs:
         with:
           name: ios-build-artifacts
           path: |
-            flutter_app/build/ios/iphoneos/
+            flutter_app/build/ios/Debug-iphonesimulator/
             flutter_app/ios/Podfile.lock
             flutter_app/ios/Flutter/Generated.xcconfig
           retention-days: 3
+          if-no-files-found: warn

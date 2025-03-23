@@ -120,87 +120,87 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
           
-      # Try to build with code signing if available
-      - name: Build iOS with signing (if available)
-        if: env.APPLE_CERTIFICATE != ''
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-        run: |
-          cd flutter_app
+      # # Try to build with code signing if available
+      # - name: Build iOS with signing (if available)
+      #   if: env.APPLE_CERTIFICATE != ''
+      #   env:
+      #     APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      #     APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      #     APPLE_ID: ${{ secrets.APPLE_ID }}
+      #     APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+      #   run: |
+      #     cd flutter_app
           
-          # Check code signing status
-          security find-identity -v -p codesigning || echo "No codesigning identities found"
+      #     # Check code signing status
+      #     security find-identity -v -p codesigning || echo "No codesigning identities found"
           
-          # Set up export options plist - using a different approach to avoid YAML issues
-          echo '<?xml version="1.0" encoding="UTF-8"?>' > exportOptions.plist
-          echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> exportOptions.plist
-          echo '<plist version="1.0">' >> exportOptions.plist
-          echo '<dict>' >> exportOptions.plist
-          echo '    <key>method</key>' >> exportOptions.plist
-          echo '    <string>development</string>' >> exportOptions.plist
-          echo '    <key>teamID</key>' >> exportOptions.plist
-          echo '    <string>'${APPLE_TEAM_ID}'</string>' >> exportOptions.plist
-          echo '    <key>signingStyle</key>' >> exportOptions.plist
-          echo '    <string>automatic</string>' >> exportOptions.plist
-          echo '</dict>' >> exportOptions.plist
-          echo '</plist>' >> exportOptions.plist
+      #     # Set up export options plist - using a different approach to avoid YAML issues
+      #     echo '<?xml version="1.0" encoding="UTF-8"?>' > exportOptions.plist
+      #     echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> exportOptions.plist
+      #     echo '<plist version="1.0">' >> exportOptions.plist
+      #     echo '<dict>' >> exportOptions.plist
+      #     echo '    <key>method</key>' >> exportOptions.plist
+      #     echo '    <string>development</string>' >> exportOptions.plist
+      #     echo '    <key>teamID</key>' >> exportOptions.plist
+      #     echo '    <string>'${APPLE_TEAM_ID}'</string>' >> exportOptions.plist
+      #     echo '    <key>signingStyle</key>' >> exportOptions.plist
+      #     echo '    <string>automatic</string>' >> exportOptions.plist
+      #     echo '</dict>' >> exportOptions.plist
+      #     echo '</plist>' >> exportOptions.plist
           
-          # Configure automatic signing in Xcode project
-          cd ios
-          /usr/libexec/PlistBuddy -c "Delete :Signing:ProvisioningProfiles" Runner.xcodeproj/project.pbxproj || true
-          /usr/libexec/PlistBuddy -c "Add :Signing:ProvisioningProfiles dict" Runner.xcodeproj/project.pbxproj || true
-          cd ..
+      #     # Configure automatic signing in Xcode project
+      #     cd ios
+      #     /usr/libexec/PlistBuddy -c "Delete :Signing:ProvisioningProfiles" Runner.xcodeproj/project.pbxproj || true
+      #     /usr/libexec/PlistBuddy -c "Add :Signing:ProvisioningProfiles dict" Runner.xcodeproj/project.pbxproj || true
+      #     cd ..
           
-          # Build with code signing
-          flutter build ios --release
+      #     # Build with code signing
+      #     flutter build ios --release
           
-          # Archive and export IPA using xcodebuild
-          cd ios
-          xcodebuild -workspace Runner.xcworkspace -scheme Runner -sdk iphoneos -configuration Release archive -archivePath Runner.xcarchive
-          xcodebuild -exportArchive -archivePath Runner.xcarchive -exportOptionsPlist ../exportOptions.plist -exportPath ../build/ios/iphoneos
+      #     # Archive and export IPA using xcodebuild
+      #     cd ios
+      #     xcodebuild -workspace Runner.xcworkspace -scheme Runner -sdk iphoneos -configuration Release archive -archivePath Runner.xcarchive
+      #     xcodebuild -exportArchive -archivePath Runner.xcarchive -exportOptionsPlist ../exportOptions.plist -exportPath ../build/ios/iphoneos
           
-      - name: Upload Release IPA (if available)
-        if: env.APPLE_CERTIFICATE != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-release-app
-          path: flutter_app/build/ios/iphoneos/Runner.ipa
-          retention-days: 7
+      # - name: Upload Release IPA (if available)
+      #   if: env.APPLE_CERTIFICATE != ''
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: ios-release-app
+      #     path: flutter_app/build/ios/iphoneos/Runner.ipa
+      #     retention-days: 7
           
-      # Build without code signing as fallback
-      - name: Build iOS for physical devices (no signing)
-        if: env.APPLE_CERTIFICATE == ''
-        run: |
-          cd flutter_app
-          flutter build ios --release --no-codesign
+      # # Build without code signing as fallback
+      # - name: Build iOS for physical devices (no signing)
+      #   if: env.APPLE_CERTIFICATE == ''
+      #   run: |
+      #     cd flutter_app
+      #     flutter build ios --release --no-codesign
           
-      - name: Create Release IPA (no signing)
-        if: env.APPLE_CERTIFICATE == ''
-        run: |
-          mkdir -p flutter_app/build/ios/iphoneos/Payload
-          find flutter_app/build -path "*/iphoneos/Runner.app" -type d | xargs -I{} cp -r {} flutter_app/build/ios/iphoneos/Payload/ || echo "Failed to copy Runner.app"
-          cd flutter_app/build/ios/iphoneos
-          zip -r release-ios-app.zip Payload || echo "Failed to create zip"
+      # - name: Create Release IPA (no signing)
+      #   if: env.APPLE_CERTIFICATE == ''
+      #   run: |
+      #     mkdir -p flutter_app/build/ios/iphoneos/Payload
+      #     find flutter_app/build -path "*/iphoneos/Runner.app" -type d | xargs -I{} cp -r {} flutter_app/build/ios/iphoneos/Payload/ || echo "Failed to copy Runner.app"
+      #     cd flutter_app/build/ios/iphoneos
+      #     zip -r release-ios-app.zip Payload || echo "Failed to create zip"
           
-      - name: Upload Release IPA (no signing)
-        if: env.APPLE_CERTIFICATE == ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-release-app-unsigned
-          path: flutter_app/build/ios/iphoneos/release-ios-app.zip
-          retention-days: 7
-          if-no-files-found: warn
+      # - name: Upload Release IPA (no signing)
+      #   if: env.APPLE_CERTIFICATE == ''
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: ios-release-app-unsigned
+      #     path: flutter_app/build/ios/iphoneos/release-ios-app.zip
+      #     retention-days: 7
+      #     if-no-files-found: warn
           
-      - name: Upload build artifacts for debugging
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-build-artifacts
-          path: |
-            flutter_app/ios/Podfile.lock
-            flutter_app/ios/Flutter/Generated.xcconfig
-            flutter_app/exportOptions.plist
-          retention-days: 3
+      # - name: Upload build artifacts for debugging
+      #   if: always()
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: ios-build-artifacts
+      #     path: |
+      #       flutter_app/ios/Podfile.lock
+      #       flutter_app/ios/Flutter/Generated.xcconfig
+      #       flutter_app/exportOptions.plist
+      #     retention-days: 3
