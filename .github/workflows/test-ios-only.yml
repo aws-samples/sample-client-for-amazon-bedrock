@@ -58,8 +58,12 @@ jobs:
 
       - name: Prepare iOS build
         run: |
-          cd flutter_app/ios
-          pod install
+          cd flutter_app
+          flutter clean
+          flutter pub get
+          cd ios
+          rm -rf Pods Podfile.lock
+          pod install --repo-update
 
       # Optional: Setup code signing if secrets are available
       - name: Install Apple Certificate

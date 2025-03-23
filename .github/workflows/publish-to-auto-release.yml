@@ -184,8 +184,12 @@ jobs:
           
       - name: Prepare iOS build
         run: |
-          cd flutter_app/ios
-          pod install
+          cd flutter_app
+          flutter clean
+          flutter pub get
+          cd ios
+          rm -rf Pods Podfile.lock
+          pod install --repo-update
 
       - name: Install Apple Certificate
         if: env.APPLE_CERTIFICATE != ''
@@ -218,9 +222,10 @@ jobs:
       - name: Build iOS IPA
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE != '' }}
+          ENABLE_CODE_SIGNING: ${{ env.APPLE_CERTIFICATE != '' }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
         run: |
           cd flutter_app
           if [ "$ENABLE_CODE_SIGNING" = "true" ]; then
