@@ -99,13 +99,18 @@ jobs:
           cd flutter_app
           flutter build ios --debug --no-codesign
 
+      - name: List build directories
+        run: |
+          find flutter_app/build -type d -name "*Debug*" || echo "No Debug directories found"
+          find flutter_app/build -name "Runner.app" || echo "No Runner.app found"
+          ls -la flutter_app/build/ios/ || echo "No ios directory"
+
       - name: Create Debug IPA
         run: |
-          cd flutter_app/build/ios
-          mkdir -p Debug-iphonesimulator/Payload
-          cp -r Debug-iphonesimulator/Runner.app Debug-iphonesimulator/Payload
-          cd Debug-iphonesimulator
-          zip -r debug-ios-app.zip Payload
+          mkdir -p flutter_app/build/ios/Debug-iphonesimulator/Payload
+          find flutter_app/build -name "Runner.app" -type d | xargs -I{} cp -r {} flutter_app/build/ios/Debug-iphonesimulator/Payload/ || echo "Failed to copy Runner.app"
+          cd flutter_app/build/ios/Debug-iphonesimulator
+          zip -r debug-ios-app.zip Payload || echo "Failed to create zip"
 
       - name: Upload Debug IPA
         uses: actions/upload-artifact@v4
@@ -113,6 +118,7 @@ jobs:
           name: ios-debug-app
           path: flutter_app/build/ios/Debug-iphonesimulator/debug-ios-app.zip
           retention-days: 7
+          if-no-files-found: warn
           
       # Try to build with code signing if available
       - name: Build iOS with signing (if available)
@@ -163,11 +169,10 @@ jobs:
       - name: Create Release IPA (no signing)
         if: env.APPLE_CERTIFICATE == ''
         run: |
-          cd flutter_app/build/ios
-          mkdir -p iphoneos/Payload
-          cp -r iphoneos/Runner.app iphoneos/Payload
-          cd iphoneos
-          zip -r release-ios-app.zip Payload
+          mkdir -p flutter_app/build/ios/iphoneos/Payload
+          find flutter_app/build -path "*/iphoneos/Runner.app" -type d | xargs -I{} cp -r {} flutter_app/build/ios/iphoneos/Payload/ || echo "Failed to copy Runner.app"
+          cd flutter_app/build/ios/iphoneos
+          zip -r release-ios-app.zip Payload || echo "Failed to create zip"
           
       - name: Upload Release IPA (no signing)
         if: env.APPLE_CERTIFICATE == ''
@@ -176,6 +181,7 @@ jobs:
           name: ios-release-app-unsigned
           path: flutter_app/build/ios/iphoneos/release-ios-app.zip
           retention-days: 7
+          if-no-files-found: warn
           
       - name: Upload build artifacts for debugging
         if: always()
