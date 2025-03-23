@@ -68,7 +68,7 @@ jobs:
           flutter build apk --release
 
       - name: Upload Release APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: app-release
           path: flutter_app/build/app/outputs/flutter-apk/app-release.apk
@@ -81,7 +81,7 @@ jobs:
           flutter build apk --debug
 
       - name: Upload Debug APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: app-debug
           path: flutter_app/build/app/outputs/flutter-apk/app-debug.apk

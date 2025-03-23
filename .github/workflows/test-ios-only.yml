@@ -100,7 +100,7 @@ jobs:
           zip -r debug-ios-app.zip Payload
 
       - name: Upload Debug IPA
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ios-debug-app
           path: flutter_app/build/ios/Debug-iphonesimulator/debug-ios-app.zip
@@ -140,7 +140,7 @@ EOL
           
       - name: Upload Release IPA (if available)
         if: ${{ secrets.APPLE_CERTIFICATE != '' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ios-release-app
           path: flutter_app/build/ios/iphoneos/Runner.ipa
@@ -163,7 +163,7 @@ EOL
           
       - name: Upload Release IPA (no signing)
         if: ${{ secrets.APPLE_CERTIFICATE == '' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ios-release-app-unsigned
           path: flutter_app/build/ios/iphoneos/release-ios-app.zip
@@ -171,7 +171,7 @@ EOL
           
       - name: Upload build artifacts for debugging
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ios-build-artifacts
           path: |
