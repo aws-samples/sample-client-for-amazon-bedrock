@@ -261,9 +261,10 @@ jobs:
             cp flutter_app/build/ios/iphoneos/Runner.ipa flutter_app/build/ios/iphoneos/Sample.Client.for.Amazon.Bedrock.ipa
           else
             # Create IPA manually
-            cd flutter_app/build/ios/iphoneos
-            mkdir -p Payload
-            cp -r Runner.app Payload
+            cd flutter_app/build/ios
+            mkdir -p iphoneos/Payload
+            cp -r iphoneos/Runner.app iphoneos/Payload
+            cd iphoneos
             zip -r Sample.Client.for.Amazon.Bedrock.ipa Payload
           fi
           

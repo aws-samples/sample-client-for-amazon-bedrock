@@ -101,9 +101,10 @@ jobs:
 
       - name: Create Debug IPA
         run: |
-          cd flutter_app/build/ios/Debug-iphonesimulator
-          mkdir -p Payload
-          cp -r Runner.app Payload
+          cd flutter_app/build/ios
+          mkdir -p Debug-iphonesimulator/Payload
+          cp -r Debug-iphonesimulator/Runner.app Debug-iphonesimulator/Payload
+          cd Debug-iphonesimulator
           zip -r debug-ios-app.zip Payload
 
       - name: Upload Debug IPA
@@ -162,9 +163,10 @@ jobs:
       - name: Create Release IPA (no signing)
         if: env.APPLE_CERTIFICATE == ''
         run: |
-          cd flutter_app/build/ios/iphoneos
-          mkdir -p Payload
-          cp -r Runner.app Payload
+          cd flutter_app/build/ios
+          mkdir -p iphoneos/Payload
+          cp -r iphoneos/Runner.app iphoneos/Payload
+          cd iphoneos
           zip -r release-ios-app.zip Payload
           
       - name: Upload Release IPA (no signing)
