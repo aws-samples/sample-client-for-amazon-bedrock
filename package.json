@@ -1,5 +1,5 @@
 {
-  "name": "Sample-Client-for-Amazon-Bedrock",
+  "name": "sample-client-for-amazon-bedrock",
   "private": false,
   "license": "mit",
   "scripts": {

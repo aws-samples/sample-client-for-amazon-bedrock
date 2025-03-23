@@ -1,0 +1,206 @@
+name: "test-ios-only"
+
+on: 
+  workflow_dispatch: # Manual trigger
+  pull_request:
+    paths:
+      - 'flutter_app/**'
+      - '.github/workflows/test-ios-only.yml'
+
+# This workflow will only build the iOS app for testing purposes
+
+jobs:
+  test-ios:
+    permissions:
+      contents: write
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install Node.js dependencies
+        run: yarn install
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.2'
+          channel: 'stable'
+
+      - name: Verify Flutter version
+        run: flutter --version
+
+      - name: Install Flutter dependencies with clean
+        run: |
+          cd flutter_app
+          flutter clean
+          flutter pub cache repair
+          flutter pub get
+
+      # Use the exact same command as in package.json for consistency
+      - name: Build iOS app using package.json script pattern
+        run: |
+          # Export web assets
+          yarn export
+          
+          # Create assets directory and zip output
+          mkdir -p ./flutter_app/assets
+          zip -r ./flutter_app/assets/out.zip out
+
+      - name: Install Cocoapods
+        run: |
+          sudo gem install cocoapods
+          pod --version
+
+      - name: Prepare iOS build
+        run: |
+          cd flutter_app
+          flutter clean
+          flutter pub get
+          cd ios
+          rm -rf Pods Podfile.lock
+          pod install --repo-update
+
+      # Optional: Setup code signing if secrets are available
+      - name: Install Apple Certificate
+        if: env.APPLE_CERTIFICATE != ''
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD || 'temporary_password' }}
+        run: |
+          # Create a temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+          
+          # Import certificate to keychain
+          echo $APPLE_CERTIFICATE | base64 --decode > certificate.p12
+          security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          
+          # Set up provisioning profiles if available
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          
+          # Clean up
+          rm certificate.p12
+
+      - name: Build iOS (Debug)
+        run: |
+          cd flutter_app
+          flutter build ios --debug --no-codesign
+
+      - name: List build directories
+        run: |
+          find flutter_app/build -type d -name "*Debug*" || echo "No Debug directories found"
+          find flutter_app/build -name "Runner.app" || echo "No Runner.app found"
+          ls -la flutter_app/build/ios/ || echo "No ios directory"
+
+      - name: Create Debug IPA
+        run: |
+          mkdir -p flutter_app/build/ios/Debug-iphonesimulator/Payload
+          find flutter_app/build -name "Runner.app" -type d | xargs -I{} cp -r {} flutter_app/build/ios/Debug-iphonesimulator/Payload/ || echo "Failed to copy Runner.app"
+          cd flutter_app/build/ios/Debug-iphonesimulator
+          zip -r debug-ios-app.zip Payload || echo "Failed to create zip"
+
+      - name: Upload Debug IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-debug-app
+          path: flutter_app/build/ios/Debug-iphonesimulator/debug-ios-app.zip
+          retention-days: 7
+          if-no-files-found: warn
+          
+      # # Try to build with code signing if available
+      # - name: Build iOS with signing (if available)
+      #   if: env.APPLE_CERTIFICATE != ''
+      #   env:
+      #     APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      #     APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      #     APPLE_ID: ${{ secrets.APPLE_ID }}
+      #     APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+      #   run: |
+      #     cd flutter_app
+          
+      #     # Check code signing status
+      #     security find-identity -v -p codesigning || echo "No codesigning identities found"
+          
+      #     # Set up export options plist - using a different approach to avoid YAML issues
+      #     echo '<?xml version="1.0" encoding="UTF-8"?>' > exportOptions.plist
+      #     echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> exportOptions.plist
+      #     echo '<plist version="1.0">' >> exportOptions.plist
+      #     echo '<dict>' >> exportOptions.plist
+      #     echo '    <key>method</key>' >> exportOptions.plist
+      #     echo '    <string>development</string>' >> exportOptions.plist
+      #     echo '    <key>teamID</key>' >> exportOptions.plist
+      #     echo '    <string>'${APPLE_TEAM_ID}'</string>' >> exportOptions.plist
+      #     echo '    <key>signingStyle</key>' >> exportOptions.plist
+      #     echo '    <string>automatic</string>' >> exportOptions.plist
+      #     echo '</dict>' >> exportOptions.plist
+      #     echo '</plist>' >> exportOptions.plist
+          
+      #     # Configure automatic signing in Xcode project
+      #     cd ios
+      #     /usr/libexec/PlistBuddy -c "Delete :Signing:ProvisioningProfiles" Runner.xcodeproj/project.pbxproj || true
+      #     /usr/libexec/PlistBuddy -c "Add :Signing:ProvisioningProfiles dict" Runner.xcodeproj/project.pbxproj || true
+      #     cd ..
+          
+      #     # Build with code signing
+      #     flutter build ios --release
+          
+      #     # Archive and export IPA using xcodebuild
+      #     cd ios
+      #     xcodebuild -workspace Runner.xcworkspace -scheme Runner -sdk iphoneos -configuration Release archive -archivePath Runner.xcarchive
+      #     xcodebuild -exportArchive -archivePath Runner.xcarchive -exportOptionsPlist ../exportOptions.plist -exportPath ../build/ios/iphoneos
+          
+      # - name: Upload Release IPA (if available)
+      #   if: env.APPLE_CERTIFICATE != ''
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: ios-release-app
+      #     path: flutter_app/build/ios/iphoneos/Runner.ipa
+      #     retention-days: 7
+          
+      # # Build without code signing as fallback
+      # - name: Build iOS for physical devices (no signing)
+      #   if: env.APPLE_CERTIFICATE == ''
+      #   run: |
+      #     cd flutter_app
+      #     flutter build ios --release --no-codesign
+          
+      # - name: Create Release IPA (no signing)
+      #   if: env.APPLE_CERTIFICATE == ''
+      #   run: |
+      #     mkdir -p flutter_app/build/ios/iphoneos/Payload
+      #     find flutter_app/build -path "*/iphoneos/Runner.app" -type d | xargs -I{} cp -r {} flutter_app/build/ios/iphoneos/Payload/ || echo "Failed to copy Runner.app"
+      #     cd flutter_app/build/ios/iphoneos
+      #     zip -r release-ios-app.zip Payload || echo "Failed to create zip"
+          
+      # - name: Upload Release IPA (no signing)
+      #   if: env.APPLE_CERTIFICATE == ''
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: ios-release-app-unsigned
+      #     path: flutter_app/build/ios/iphoneos/release-ios-app.zip
+      #     retention-days: 7
+      #     if-no-files-found: warn
+          
+      # - name: Upload build artifacts for debugging
+      #   if: always()
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: ios-build-artifacts
+      #     path: |
+      #       flutter_app/ios/Podfile.lock
+      #       flutter_app/ios/Flutter/Generated.xcconfig
+      #       flutter_app/exportOptions.plist
+      #     retention-days: 3

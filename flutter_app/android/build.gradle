@@ -2,6 +2,7 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        // Remove jcenter as it's deprecated
     }
 }
 

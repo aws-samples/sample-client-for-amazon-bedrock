@@ -166,8 +166,6 @@ export class ClaudeApi implements LLMApi {
           new_contents.push(text_playload);
         } else {
           for (var j = 0; j < messages[i].content.length; j++) {
-
-
             if (
               (messages[i].content[j] as MultimodalContent).type === "image_url"
             ) {
@@ -276,7 +274,6 @@ export class ClaudeApi implements LLMApi {
     }
 
     // console.log("messages[0].role", messages[0].role)
-
     const requestPayload: any = {
       ...(has_system_prompt ? { system: system_prompt } : {}),
       messages: new_messages,
@@ -418,7 +415,6 @@ export class ClaudeApi implements LLMApi {
       modelConfig,
       modelVersion,
     );
-
     // add max_tokens to vision model
     if (visionModel) {
       Object.defineProperty(requestPayload, "max_tokens", {
@@ -500,35 +496,37 @@ export class ClaudeApi implements LLMApi {
         try {
           // Send the command to the model and wait for the response
           // Extract and print the streamed response text in real-time.
-          let index = 1;
           let think_end = false;
-
+          let hasSeenThinking = false; // 跟踪是否已经看到过思考内容
+          
           for await (const item of response.stream ?? []) {
             if (item.contentBlockDelta) {
               const thinkingContent = item.contentBlockDelta.delta?.reasoningContent?.text;
               const content = item.contentBlockDelta.delta?.text;
               
-              // process thinking content
-              if (thinkingContent && index == 1) {
-                // add thinking start
-                remainText += "> **Think:**\n> ";
-              }
-              
+              // 处理思考内容
               if (thinkingContent) {
-                // process thinking content and add > prefix
+                // 第一次出现思考内容时添加标题
+                if (!hasSeenThinking) {
+                  hasSeenThinking = true;
+                  remainText += "> **Think:**\n> ";
+                }
+                
+                // 处理思考内容并添加 > 前缀
                 const formattedThinking = thinkingContent.replace(/\n/g, '\n> ');
                 remainText += formattedThinking;
               }
-              // process thinking end
-              if (content && index > 1 && !think_end) {
-                think_end = true;
-                // add thinking end
-                remainText += "\n\n"; 
-              }
+              
+              // 处理正常内容
               if (content) {
+                // 如果从思考内容转到正常内容，添加分隔符
+                if (hasSeenThinking && !think_end) {
+                  think_end = true;
+                  remainText += "\n\n";
+                }
+                
                 remainText += content;
               }
-              index++;
             }
           }
           finish()

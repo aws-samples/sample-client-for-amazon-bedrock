@@ -47,6 +47,7 @@ import StopIcon from "../icons/pause.svg";
 import RobotIcon from "../icons/robot.svg";
 import CloudIcon from "../icons/cloud-success.svg";
 
+
 import {
   ChatMessage,
   SubmitKey,
@@ -97,6 +98,7 @@ import {
   CHAT_PAGE_SIZE,
   LAST_INPUT_KEY,
   Path,
+  REASONING_MODEL,
   REQUEST_TIMEOUT_MS,
   UNFINISHED_INPUT,
 } from "../constant";
@@ -773,6 +775,8 @@ export function ChatActions(props: {
         icon={<CloudIcon />}
       />
 
+
+
       {showModelSelector && (
         <Selector
           defaultSelectedValue={currentModel}
@@ -1423,6 +1427,7 @@ function _Chat() {
     setAttachImages(images);
   }
 
+ 
   return (
     <div className={styles.chat} key={session.id}>
       <div className="window-header" data-tauri-drag-region>
@@ -1447,7 +1452,33 @@ function _Chat() {
             {!session.topic ? DEFAULT_TOPIC : session.topic}
           </div>
           <div className="window-header-sub-title">
-            {Locale.Chat.SubTitle(session.messages.length)}
+           {Locale.Chat.SubTitle(session.messages.length)}
+          </div>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: "10px" }}>
+            <span>{session.mask.modelConfig?.model ?? ""}</span>
+            {REASONING_MODEL.includes(session.mask.modelConfig?.model ?? "")&&
+            <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <input 
+                type="checkbox"
+                style={{ margin: 0 }}
+                checked={session.mask.modelConfig?.reasoning_config?.type === "enabled"}
+                onChange={(e) => {
+                  chatStore.updateCurrentSession((session) => {
+                    if (!session.mask.modelConfig.reasoning_config) {
+                      session.mask.modelConfig.reasoning_config = {
+                        type: e.target.checked ? "enabled" : "disabled",
+                        budget_tokens: Math.min(1024, session.mask.modelConfig.max_tokens || 1024)
+                      };
+                    } else {
+                      session.mask.modelConfig.reasoning_config.type = e.target.checked ? "enabled" : "disabled";
+                    }
+                  });
+                }}
+              />
+              <span>Reasoning</span>
+            </label>
+            }
           </div>
         </div>
         <div className="window-actions">
@@ -1712,6 +1743,7 @@ function _Chat() {
             setAttachDocument(data)
           }}
         />
+        
 
         <ChatActions
           uploadImage={uploadImage}
@@ -1782,8 +1814,10 @@ function _Chat() {
                   </div>
                 );
               })}
+              
             </div>
           )}
+          
           <IconButton
             icon={<SendWhiteIcon />}
             text={Locale.Chat.Send}
@@ -1791,7 +1825,12 @@ function _Chat() {
             type="primary"
             onClick={() => doSubmit(userInput)}
           />
+          
         </label>
+        
+        
+       
+       
       </div>
 
       {showExport && (
@@ -1805,6 +1844,7 @@ function _Chat() {
           }}
         />
       )}
+
     </div>
   );
 }

@@ -82,17 +82,6 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-InAppWebViewSettings settings = InAppWebViewSettings(
-    useOnDownloadStart: true,
-    allowsBackForwardNavigationGestures: true,
-    javaScriptEnabled: true,
-    // useShouldOverrideUrlLoading: true,
-    // mediaPlaybackRequiresUserGesture: false,
-    // allowsInlineMediaPlayback: true,
-    // useHybridComposition: true,
-    // useOnLoadResource: true
-    );
-
 class _MyAppState extends State<MyApp> {
   final GlobalKey webViewKey = GlobalKey();
 
@@ -133,7 +122,7 @@ class _MyAppState extends State<MyApp> {
                 key: webViewKey,
                 initialUrlRequest: URLRequest(url: serverAddr),
                 // initialFile:'assets/web/index.html',
-                initialSettings: settings,
+                // initialSettings: settings,
                 onWebViewCreated: (controller) {
                   webViewController = controller;
                   // webViewController?.loadFile(
@@ -144,15 +133,20 @@ class _MyAppState extends State<MyApp> {
                   //       true); // 启用调试模式
                   // }
                 },
-                onDownloadStartRequest: (controller, url) async {
+                onDownloadStartRequest: (controller, downloadStartRequest) async {
+                  WebUri url = downloadStartRequest.url;
                   print("url================================"+url.toString());
-                  if (url.url.scheme == "data") {
-                    String? outputFile = await FilePicker.platform.saveFile(
-                        dialogTitle: 'Please select an output file:',
-                        fileName:
-                            'brclient_${DateTime.now().microsecondsSinceEpoch}.txt',
-                        bytes: url.url.data!.contentAsBytes());
-                    print("outputFile: $outputFile");
+                  if (url.toString().startsWith("data:")) {
+                    // Handle data URL
+                    final dataUri = Uri.parse(url.toString());
+                    if (dataUri.data != null) {
+                      String? outputFile = await FilePicker.platform.saveFile(
+                          dialogTitle: 'Please select an output file:',
+                          fileName:
+                              'brclient_${DateTime.now().microsecondsSinceEpoch}.txt',
+                          bytes: dataUri.data!.contentAsBytes());
+                      print("outputFile: $outputFile");
+                    }
                   }
                 },
                 onLongPressHitTestResult: (controller, hitTestResult) async {
