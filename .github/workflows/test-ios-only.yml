@@ -31,6 +31,9 @@ jobs:
           flutter-version: '3.29.2'
           channel: 'stable'
 
+      - name: Verify Flutter version
+        run: flutter --version
+
       - name: Install Flutter dependencies with clean
         run: |
           cd flutter_app
@@ -116,19 +119,17 @@ jobs:
         run: |
           cd flutter_app
           
-          # Set up export options plist with proper quoting for YAML
-          cat > exportOptions.plist << 'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>method</key>
-    <string>development</string>
-    <key>teamID</key>
-    <string>${APPLE_TEAM_ID}</string>
-</dict>
-</plist>
-EOF
+          # Set up export options plist - using a different approach to avoid YAML issues
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > exportOptions.plist
+          echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> exportOptions.plist
+          echo '<plist version="1.0">' >> exportOptions.plist
+          echo '<dict>' >> exportOptions.plist
+          echo '    <key>method</key>' >> exportOptions.plist
+          echo '    <string>development</string>' >> exportOptions.plist
+          echo '    <key>teamID</key>' >> exportOptions.plist
+          echo '    <string>'${APPLE_TEAM_ID}'</string>' >> exportOptions.plist
+          echo '</dict>' >> exportOptions.plist
+          echo '</plist>' >> exportOptions.plist
           
           # Build with code signing
           flutter build ios --release
