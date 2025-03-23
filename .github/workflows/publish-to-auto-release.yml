@@ -87,16 +87,29 @@ jobs:
       - name: Install Node.js dependencies
         run: yarn install
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+        with:
+          sdk-platform: "android-33"
+          build-tools: "33.0.1"
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.29.2'
-          java-version: '11'
           channel: 'stable'
 
       - name: Install Flutter dependencies
         run: |
           cd flutter_app
+          flutter clean
+          flutter pub cache repair
           flutter pub get
 
       - name: Export web assets
@@ -147,13 +160,19 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.29.2'
-          java-version: '11'
           channel: 'stable'
 
       - name: Install Flutter dependencies
         run: |
           cd flutter_app
+          flutter clean
+          flutter pub cache repair
           flutter pub get
+
+      - name: Install Cocoapods
+        run: |
+          sudo gem install cocoapods
+          pod --version
 
       - name: Export web assets
         run: yarn export
@@ -162,14 +181,21 @@ jobs:
         run: |
           mkdir -p ./flutter_app/assets
           zip -r ./flutter_app/assets/out.zip out
+          
+      - name: Prepare iOS build
+        run: |
+          cd flutter_app/ios
+          pod install
 
       - name: Install Apple Certificate
-        if: env.APPLE_CERTIFICATE
+        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD || 'temporary_password' }}
         run: |
           # Create a temporary keychain
@@ -183,6 +209,9 @@ jobs:
           security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" build.keychain
           
+          # Set up provisioning profiles if available
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          
           # Clean up
           rm certificate.p12
 
@@ -190,12 +219,32 @@ jobs:
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE != '' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
         run: |
           cd flutter_app
           if [ "$ENABLE_CODE_SIGNING" = "true" ]; then
             # Build with code signing
-            flutter build ios --release --no-codesign
-            # Additional code signing steps can be added here if needed
+            flutter build ios --release --no-codesign # Initial build
+            
+            # Set up export options plist
+            cat > exportOptions.plist << EOL
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>app-store</string>
+    <key>teamID</key>
+    <string>${APPLE_TEAM_ID}</string>
+</dict>
+</plist>
+EOL
+            
+            # Archive and export IPA using xcodebuild if possible
+            cd ios
+            xcodebuild -workspace Runner.xcworkspace -scheme Runner -sdk iphoneos -configuration Release archive -archivePath Runner.xcarchive || true
+            xcodebuild -exportArchive -archivePath Runner.xcarchive -exportOptionsPlist ../exportOptions.plist -exportPath ../build/ios/iphoneos || true
           else
             # Build without code signing
             flutter build ios --release --no-codesign
@@ -203,10 +252,21 @@ jobs:
 
       - name: Create IPA file
         run: |
-          cd flutter_app/build/ios/iphoneos
-          mkdir -p Payload
-          cp -r Runner.app Payload
-          zip -r Sample.Client.for.Amazon.Bedrock.ipa Payload
+          # Check if IPA was already created by xcodebuild
+          if [ -f "flutter_app/build/ios/iphoneos/Runner.ipa" ]; then
+            echo "Using IPA created by xcodebuild"
+            cp flutter_app/build/ios/iphoneos/Runner.ipa flutter_app/build/ios/iphoneos/Sample.Client.for.Amazon.Bedrock.ipa
+          else
+            # Create IPA manually
+            cd flutter_app/build/ios/iphoneos
+            mkdir -p Payload
+            cp -r Runner.app Payload
+            zip -r Sample.Client.for.Amazon.Bedrock.ipa Payload
+          fi
+          
+          # Verify IPA was created successfully
+          ls -la flutter_app/build/ios/iphoneos/Sample.Client.for.Amazon.Bedrock.ipa
+          ls -la Sample.Client.for.Amazon.Bedrock.ipa
 
       - name: Get app version
         id: get_version
@@ -223,3 +283,14 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Upload build artifacts for debugging
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: ios-build-artifacts
+          path: |
+            flutter_app/build/ios/iphoneos/
+            flutter_app/ios/Podfile.lock
+            flutter_app/ios/Flutter/Generated.xcconfig
+          retention-days: 3

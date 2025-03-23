@@ -1,7 +1,11 @@
 name: "test-android-only"
 
 on: 
-  workflow_dispatch: # 允许手动触发
+  workflow_dispatch: # Manual trigger
+  pull_request:
+    paths:
+      - 'flutter_app/**'
+      - '.github/workflows/test-android-only.yml'
 
 # This workflow will only build the Android app for testing purposes
 
@@ -21,17 +25,17 @@ jobs:
       - name: Install Node.js dependencies
         run: yarn install
 
-      - name: Check Flutter version before setup
-        run: flutter --version || echo "Flutter not installed yet"
-
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
+        with:
+          sdk-platform: "android-33"
+          build-tools: "33.0.1"
 
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
-          java-version: '11'
+          java-version: '17'
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -49,15 +53,36 @@ jobs:
           flutter pub cache repair
           flutter pub get
 
-      - name: Export web assets
-        run: yarn export
-
-      - name: Prepare Flutter assets
+      # Use the exact same command as in package.json for consistency
+      - name: Build Android APK using package.json script pattern
         run: |
+          # Export web assets
+          yarn export
+          
+          # Create assets directory and zip output
           mkdir -p ./flutter_app/assets
           zip -r ./flutter_app/assets/out.zip out
+          
+          # Build APK
+          cd ./flutter_app
+          flutter build apk --release
 
-      - name: Build Android APK
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-release
+          path: flutter_app/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 7
+          
+      # Optional: Build debug version for testing
+      - name: Build Android APK (Debug)
         run: |
           cd flutter_app
-          flutter build apk --release
+          flutter build apk --debug
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-debug
+          path: flutter_app/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7

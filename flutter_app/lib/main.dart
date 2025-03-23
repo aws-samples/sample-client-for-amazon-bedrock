@@ -18,7 +18,7 @@ import 'package:permission_handler/permission_handler.dart';
 final rand = Random();
 int portMin = 1024;
 int portMax = 65535;
-Uri serverAddr = Uri.parse("http://localhost:8080");
+WebUri serverAddr = WebUri("http://localhost:8080");
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,7 +58,7 @@ Future main() async {
     } on SocketException catch (e) {
       print(e);
       int port = portMin + rand.nextInt(portMax - portMin);
-      serverAddr = Uri.parse("http://localhost:$port");
+      serverAddr = WebUri("http://localhost:$port");
     }
   }
 
@@ -113,7 +113,7 @@ class _MyAppState extends State<MyApp> {
             Expanded(
               child: InAppWebView(
                 key: webViewKey,
-                initialUrl: serverAddr.toString(),
+                initialUrlRequest: URLRequest(url: serverAddr),
                 // initialFile:'assets/web/index.html',
                 // initialSettings: settings,
                 onWebViewCreated: (controller) {
@@ -126,11 +126,12 @@ class _MyAppState extends State<MyApp> {
                   //       true); // 启用调试模式
                   // }
                 },
-                onDownloadStart: (controller, url) async {
+                onDownloadStartRequest: (controller, downloadStartRequest) async {
+                  WebUri url = downloadStartRequest.url;
                   print("url================================"+url.toString());
-                  if (url.startsWith("data:")) {
+                  if (url.toString().startsWith("data:")) {
                     // Handle data URL
-                    final dataUri = Uri.parse(url);
+                    final dataUri = Uri.parse(url.toString());
                     if (dataUri.data != null) {
                       String? outputFile = await FilePicker.platform.saveFile(
                           dialogTitle: 'Please select an output file:',
