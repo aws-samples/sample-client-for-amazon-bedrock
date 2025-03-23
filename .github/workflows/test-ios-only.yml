@@ -63,7 +63,7 @@ jobs:
 
       # Optional: Setup code signing if secrets are available
       - name: Install Apple Certificate
-        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
+        if: env.APPLE_CERTIFICATE != ''
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -111,8 +111,9 @@ jobs:
           
       # Try to build with code signing if available
       - name: Build iOS with signing (if available)
-        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
+        if: env.APPLE_CERTIFICATE != ''
         env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
@@ -140,7 +141,7 @@ jobs:
           xcodebuild -exportArchive -archivePath Runner.xcarchive -exportOptionsPlist ../exportOptions.plist -exportPath ../build/ios/iphoneos
           
       - name: Upload Release IPA (if available)
-        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
+        if: env.APPLE_CERTIFICATE != ''
         uses: actions/upload-artifact@v4
         with:
           name: ios-release-app
@@ -149,13 +150,13 @@ jobs:
           
       # Build without code signing as fallback
       - name: Build iOS for physical devices (no signing)
-        if: ${{ secrets.APPLE_CERTIFICATE == '' }}
+        if: env.APPLE_CERTIFICATE == ''
         run: |
           cd flutter_app
           flutter build ios --release --no-codesign
           
       - name: Create Release IPA (no signing)
-        if: ${{ secrets.APPLE_CERTIFICATE == '' }}
+        if: env.APPLE_CERTIFICATE == ''
         run: |
           cd flutter_app/build/ios/iphoneos
           mkdir -p Payload
@@ -163,7 +164,7 @@ jobs:
           zip -r release-ios-app.zip Payload
           
       - name: Upload Release IPA (no signing)
-        if: ${{ secrets.APPLE_CERTIFICATE == '' }}
+        if: env.APPLE_CERTIFICATE == ''
         uses: actions/upload-artifact@v4
         with:
           name: ios-release-app-unsigned

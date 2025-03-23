@@ -188,7 +188,7 @@ jobs:
           pod install
 
       - name: Install Apple Certificate
-        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
+        if: env.APPLE_CERTIFICATE != ''
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
