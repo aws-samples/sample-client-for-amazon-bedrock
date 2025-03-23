@@ -263,7 +263,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: app-v${{ env.VERSION }}
-          files: flutter_app/build/ios/iphoneos/Sample.Client.for.Amazon.Bedrock.ipa
+          files: flutter_app/build/ios/Debug-iphonesimulator/Sample.Client.for.Amazon.Bedrock.ipa
           draft: true
           prerelease: false
         env:
