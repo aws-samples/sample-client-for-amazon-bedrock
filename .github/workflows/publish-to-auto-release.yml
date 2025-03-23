@@ -228,7 +228,7 @@ jobs:
             flutter build ios --release --no-codesign # Initial build
             
             # Set up export options plist
-            cat > exportOptions.plist << 'EOL'
+            cat > exportOptions.plist << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -239,7 +239,7 @@ jobs:
     <string>${APPLE_TEAM_ID}</string>
 </dict>
 </plist>
-EOL
+EOF
             
             # Archive and export IPA using xcodebuild if possible
             cd ios
