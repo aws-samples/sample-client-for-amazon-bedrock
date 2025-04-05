@@ -434,6 +434,7 @@
   grid-gap: 10px;
   grid-template-columns: repeat(var(--image-count), auto);
   margin-top: 10px;
+  flex-wrap: wrap;
 }
 
 .chat-message-item-image-multi {
