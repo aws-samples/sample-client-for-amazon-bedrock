@@ -462,8 +462,8 @@ export function DocumentsList(props: {
     );
 
     const filesLength = files.length;
-    if (filesLength > 3) {
-      files.splice(3, filesLength - 3);
+    if (filesLength > 10) {
+      files.splice(10, filesLength - 10);
     }
     
   }
@@ -1371,8 +1371,8 @@ function _Chat() {
             );
             const imagesLength = images.length;
 
-            if (imagesLength > 3) {
-              images.splice(3, imagesLength - 3);
+            if (imagesLength > 10) {
+              images.splice(10, imagesLength - 10);
             }
             setAttachImages(images);
           }
@@ -1397,22 +1397,29 @@ function _Chat() {
           setUploading(true);
           const files = event.target.files;
           const imagesData: string[] = [];
-          for (let i = 0; i < files.length; i++) {
+          const totalFiles = Math.min(files.length, 10); // Limit to 10 files max
+          let processedFiles = 0;
+          
+          for (let i = 0; i < totalFiles; i++) {
             const file = event.target.files[i];
             compressImage(file, 256 * 1024)
               .then((dataUrl) => {
                 imagesData.push(dataUrl);
-                if (
-                  imagesData.length === 3 ||
-                  imagesData.length === files.length
-                ) {
+                processedFiles++;
+                
+                if (processedFiles === totalFiles) {
                   setUploading(false);
                   res(imagesData);
                 }
               })
               .catch((e) => {
-                setUploading(false);
-                rej(e);
+                processedFiles++;
+                console.error("Error compressing image:", e);
+                
+                if (processedFiles === totalFiles) {
+                  setUploading(false);
+                  res(imagesData);
+                }
               });
           }
         };
@@ -1421,8 +1428,8 @@ function _Chat() {
     );
 
     const imagesLength = images.length;
-    if (imagesLength > 3) {
-      images.splice(3, imagesLength - 3);
+    if (imagesLength > 10) {
+      images.splice(10, imagesLength - 10);
     }
     setAttachImages(images);
   }
@@ -1694,11 +1701,11 @@ function _Chat() {
                     {getMessageImages(message).length > 1 && (
                       <div
                         className={styles["chat-message-item-images"]}
-                        style={
-                          {
-                            "--image-count": getMessageImages(message).length,
-                          } as React.CSSProperties
-                        }
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "10px"
+                        }}
                       >
                         {getMessageImages(message).map((image, index) => {
                           return (
@@ -1706,6 +1713,11 @@ function _Chat() {
                               className={
                                 styles["chat-message-item-image-multi"]
                               }
+                              style={{
+                                width: "120px",
+                                height: "120px",
+                                marginBottom: "10px"
+                              }}
                               key={index}
                               src={image}
                               alt=""
