@@ -40,7 +40,7 @@ import Locale, { AllLangs, ALL_LANG_OPTIONS, Lang } from "../locales";
 import { useNavigate } from "react-router-dom";
 
 import chatStyle from "./chat.module.scss";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   copyToClipboard,
   downloadAs,
@@ -226,6 +226,18 @@ function ContextPromptItem(props: {
   remove: () => void;
 }) {
   const [focusingInput, setFocusingInput] = useState(false);
+  
+  // Add ref for the input element
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Add useEffect to handle auto-height
+  useEffect(() => {
+    const textarea = textAreaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  }, [props.prompt.content]);
 
   return (
     <div className={chatStyle["context-prompt-row"]}>
@@ -253,23 +265,25 @@ function ContextPromptItem(props: {
         </>
       )}
       <Input
+        ref={textAreaRef}
         value={getMessageTextContent(props.prompt)}
         type="text"
         className={chatStyle["context-content"]}
-        rows={focusingInput ? 5 : 1}
+        rows={focusingInput ? 8 : 4}
         onFocus={() => setFocusingInput(true)}
         onBlur={() => {
           setFocusingInput(false);
-          // If the selection is not removed when the user loses focus, some
-          // extensions like "Translate" will always display a floating bar
           window?.getSelection()?.removeAllRanges();
         }}
-        onInput={(e) =>
+        onInput={(e) => {
           props.update({
             ...props.prompt,
             content: e.currentTarget.value as any,
-          })
-        }
+          });
+          // Adjust height on input
+          e.currentTarget.style.height = 'auto';
+          e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
+        }}
       />
       {!focusingInput && (
         <IconButton

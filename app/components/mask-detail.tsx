@@ -70,7 +70,7 @@ export function MaskDetail() {
   return (
     <ErrorBoundary>
       <div className={styles["mask-page"]}>
-        <div className="window-header">
+        <div className="window-header" data-tauri-drag-region>
           <div className="window-header-title">
             <div className="window-header-main-title">{editingMask.name}</div>
             <div className="window-header-submai-title">
