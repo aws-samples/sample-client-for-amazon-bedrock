@@ -21,6 +21,7 @@ export type Mask = {
 
 export const DEFAULT_MASK_STATE = {
   masks: {} as Record<string, Mask>,
+  currentMaskId: null as string | null,
 };
 
 export type MaskState = typeof DEFAULT_MASK_STATE;
@@ -98,6 +99,11 @@ export const useMaskStore = createPersistStore(
     },
     search(text: string) {
       return Object.values(get().masks);
+    },
+    selectMask: (id: string) => set({ currentMaskId: id }),
+    currentMask: () => {
+      const masks = get().masks;
+      return masks[get().currentMaskId ?? 1145141919810];
     },
   }),
   {

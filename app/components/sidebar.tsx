@@ -37,6 +37,10 @@ const ChatList = dynamic(async () => (await import("./chat-list")).ChatList, {
   loading: () => null,
 });
 
+const MaskList = dynamic(async () => (await import("./mask-list")).MaskList, {
+  loading: () => null,
+});
+
 function useHotKey() {
   const chatStore = useChatStore();
 
@@ -144,6 +148,7 @@ export function SideBar(props: { className?: string }) {
     [isMobileScreen],
   );
   const [userInfo, setUserInfo] = useState<any>({});
+  const [activeTab, setActiveTab] = useState<'chats' | 'masks'>('chats');
 
   useEffect(() => {
     if (accessStore.awsCognitoUser) {
@@ -191,13 +196,10 @@ export function SideBar(props: { className?: string }) {
         <IconButton
           icon={<MaskIcon />}
           text={shouldNarrow ? undefined : Locale.Mask.Name}
-          className={styles["sidebar-bar-button"]}
+          className={`${styles["sidebar-bar-button"]} ${activeTab === 'masks' ? styles.active : ''}`}
           onClick={() => {
-            if (config.dontShowMaskSplashScreen !== true) {
-              navigate(Path.NewChat, { state: { fromHome: true } });
-            } else {
-              navigate(Path.Masks, { state: { fromHome: true } });
-            }
+            setActiveTab('masks');
+            navigate(Path.Masks); // Navigate to masks route but keep sidebar open
           }}
           shadow
         />
@@ -210,15 +212,17 @@ export function SideBar(props: { className?: string }) {
         />
       </div>
 
-      <div
-        className={styles["sidebar-body"]}
-        onClick={(e) => {
-          if (e.target === e.currentTarget) {
-            navigate(Path.Home);
-          }
-        }}
-      >
-        <ChatList narrow={shouldNarrow} />
+      <div className={styles["sidebar-body"]}>
+        {activeTab === 'chats' ? (
+          <ChatList narrow={shouldNarrow} />
+        ) : (
+          <MaskList 
+            narrow={shouldNarrow}
+            onMaskSelect={(mask) => {
+              navigate(Path.MaskDetail, { state: { maskId: mask.id } });
+            }}
+          />
+        )}
       </div>
 
       <div className={styles["sidebar-tail"]}>
