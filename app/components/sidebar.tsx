@@ -18,8 +18,9 @@ import ChatIcon from "../icons/chat.svg";
 import Locale from "../locales";
 
 import { useAppConfig, useChatStore, useAccessStore } from "../store";
+import { DEFAULT_MASK_AVATAR, Mask, useMaskStore } from "../store/mask";
 import { getAWSCognitoUserInfo } from "../client/platforms/aws_cognito";
-import { Mask } from "../store/mask";
+import { BUILTIN_MASK_STORE } from "../masks";
 
 import {
   DEFAULT_SIDEBAR_WIDTH,
@@ -39,7 +40,7 @@ const ChatList = dynamic(async () => (await import("./chat-list")).ChatList, {
   loading: () => null,
 });
 
-const MaskList = dynamic(async () => (await import("./mask-list")).MaskList, {
+const MaskList = dynamic(async () => (await import("../components/mask-list")).MaskList, {
   loading: () => null,
 });
 
@@ -139,6 +140,7 @@ function useDragSideBar() {
 export function SideBar(props: { className?: string }) {
   const chatStore = useChatStore();
   const accessStore = useAccessStore();
+  const maskStore = useMaskStore();
 
   // drag side bar
   const { onDragStart, shouldNarrow } = useDragSideBar();
@@ -241,7 +243,11 @@ export function SideBar(props: { className?: string }) {
           <MaskList 
             narrow={shouldNarrow}
             onMaskSelect={(mask: Mask) => {
-              navigate(Path.Mask, { state: { maskId: mask.id } });
+              // Handle both custom and built-in masks
+              const selectedMask = maskStore.get(mask.id) ?? BUILTIN_MASK_STORE.get(mask.id);
+              if (selectedMask) {
+                navigate(Path.Masks, { state: { maskId: mask.id } });
+              }
             }}
           />
         )}

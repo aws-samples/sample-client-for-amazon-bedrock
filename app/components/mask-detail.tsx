@@ -27,9 +27,21 @@ export function MaskDetail() {
   const navigate = useNavigate();
   const maskStore = useMaskStore();
   const chatStore = useChatStore();
-  const currentMask = maskStore.currentMask();
+  
+  // Get mask from both stores
+  const maskFromStore = maskStore.currentMask();
+  const maskFromBuiltin = BUILTIN_MASK_STORE.get(maskStore.currentMaskId ?? "");
+  const currentMask = maskFromStore ?? maskFromBuiltin;
+
+  console.log("Debug Mask Detail:", {
+    currentMaskId: maskStore.currentMaskId,
+    maskFromStore,
+    maskFromBuiltin,
+    currentMask
+  });
 
   if (!currentMask) {
+    console.log("No mask found, showing empty state");
     return (
       <div className={styles["mask-page"]}>
         <div className="window-header">
@@ -47,7 +59,13 @@ export function MaskDetail() {
     );
   }
 
-  const editingMask = currentMask ?? BUILTIN_MASK_STORE.get(currentMask?.id);
+  const editingMask = currentMask;  // No need to check again since we already have the correct mask
+
+  console.log("Rendering mask detail for:", {
+    id: editingMask.id,
+    name: editingMask.name,
+    isBuiltin: editingMask.builtin
+  });
 
   return (
     <ErrorBoundary>
