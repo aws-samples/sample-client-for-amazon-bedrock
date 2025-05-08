@@ -13,11 +13,13 @@ import DeleteIcon from "../icons/delete.svg";
 import MaskIcon from "../icons/mask.svg";
 import PluginIcon from "../icons/plugin.svg";
 import DragIcon from "../icons/drag.svg";
+import ChatIcon from "../icons/chat.svg";
 
 import Locale from "../locales";
 
 import { useAppConfig, useChatStore, useAccessStore } from "../store";
 import { getAWSCognitoUserInfo } from "../client/platforms/aws_cognito";
+import { Mask } from "../store/mask";
 
 import {
   DEFAULT_SIDEBAR_WIDTH,
@@ -166,6 +168,19 @@ export function SideBar(props: { className?: string }) {
 
   useHotKey();
 
+  const handleChatTabClick = () => {
+    setActiveTab('chats');
+    // Navigate to current chat or first chat when switching back
+    const currentChat = chatStore.currentSession();
+    if (currentChat) {
+      navigate(Path.Chat);
+    } else if (chatStore.sessions.length > 0) {
+      const firstChat = chatStore.sessions[0];
+      chatStore.selectSession(0);
+      navigate(Path.Chat);
+    }
+  };
+
   return (
     <div
       className={`${styles.sidebar} ${props.className} ${
@@ -194,12 +209,19 @@ export function SideBar(props: { className?: string }) {
 
       <div className={styles["sidebar-header-bar"]}>
         <IconButton
+          icon={<ChatIcon />}
+          text={shouldNarrow ? undefined : Locale.Chat.Name}
+          className={`${styles["sidebar-bar-button"]} ${activeTab === 'chats' ? styles.active : ''}`}
+          onClick={handleChatTabClick}
+          shadow
+        />
+        <IconButton
           icon={<MaskIcon />}
           text={shouldNarrow ? undefined : Locale.Mask.Name}
           className={`${styles["sidebar-bar-button"]} ${activeTab === 'masks' ? styles.active : ''}`}
           onClick={() => {
             setActiveTab('masks');
-            navigate(Path.Masks); // Navigate to masks route but keep sidebar open
+            navigate(Path.Masks);
           }}
           shadow
         />
@@ -218,8 +240,8 @@ export function SideBar(props: { className?: string }) {
         ) : (
           <MaskList 
             narrow={shouldNarrow}
-            onMaskSelect={(mask) => {
-              navigate(Path.MaskDetail, { state: { maskId: mask.id } });
+            onMaskSelect={(mask: Mask) => {
+              navigate(Path.Mask, { state: { maskId: mask.id } });
             }}
           />
         )}
