@@ -2,13 +2,14 @@ import {
   ModalConfigValidator, ModelConfig, useAppConfig, useAccessStore,
 } from "../store";
 import { getServerSideConfig } from "../config/server";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Locale from "../locales";
 import { InputRange } from "./input-range";
 import { ListItem, Select } from "./ui-lib";
 // import { useAllModels } from "../utils/hooks";
 import { IconButton } from "./button";
 import ResetIcon from "../icons/reload.svg";
+import UploadIcon from "../icons/upload.svg";
 import { LLMModel } from "../client/api";
 import { DEFAULT_MODELS } from "@/app/constant";
 
@@ -32,6 +33,7 @@ export function ModelConfigList(props: {
   const accessStore = useAccessStore();
 
   const { provider, useBRProxy, BRProxyUrl, openaiApiKey } = accessStore;
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 获取当前模型的特定配置
   const getModelConfig = (modelName: string) => {
@@ -77,6 +79,33 @@ export function ModelConfigList(props: {
     }
   });
 
+  // Handle file selection and loading
+  const handleFileLoad = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const remote_models = JSON.parse(content);
+        appConfig.update(
+          (config) => (config.models = remote_models as any as LLMModel[]),
+        );
+        console.log("Models loaded from file successfully");
+      } catch (error) {
+        console.error("Error parsing JSON file:", error);
+        alert("Error: Invalid JSON file format");
+      }
+    };
+    reader.readAsText(file);
+
+    // Reset the input value so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <>
       <ListItem title={Locale.Settings.Model}>
@@ -109,7 +138,7 @@ export function ModelConfigList(props: {
               try {
                 const http_headers: any = {
                 };
-                let model_url = "https://eiai.fun/bedrock-models.json";
+                let model_url = "https://www.agentnumber47.com/bedrock/bedrock-models.json";
                 if (provider === "AWS" && useBRProxy === "True") {
                   http_headers["Authorization"] = `Bearer ${openaiApiKey}`;
                   model_url = BRProxyUrl + "/user/model/list-for-brclient?f=";
@@ -135,6 +164,22 @@ export function ModelConfigList(props: {
               }
             }}
             icon={<ResetIcon />}
+          />
+
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileLoad}
+            accept=".json"
+            style={{ display: 'none' }}
+          />
+
+          <IconButton
+            onClick={() => {
+              fileInputRef.current?.click();
+            }}
+            icon={<UploadIcon />}
+            title="Load models from local JSON file"
           />
 
         </div>
