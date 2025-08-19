@@ -41,6 +41,7 @@ export interface LLMConfig {
   temperature?: number;
   top_p?: number;
   stream?: boolean;
+  support_streaming?: boolean;
   presence_penalty?: number;
   frequency_penalty?: number;
 }

@@ -84,20 +84,88 @@ export function ModelConfigList(props: {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    console.log("[JSON Config Debug] Starting to load file:", file.name, "Size:", file.size, "bytes");
+
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const content = e.target?.result as string;
+        console.log("[JSON Config Debug] File content length:", content.length);
+        console.log("[JSON Config Debug] Raw file content:", content.substring(0, 500) + (content.length > 500 ? "..." : ""));
+
         const remote_models = JSON.parse(content);
+        console.log("[JSON Config Debug] Parsed JSON successfully. Number of models:", Array.isArray(remote_models) ? remote_models.length : "Not an array");
+        console.log("[JSON Config Debug] Parsed models structure:", remote_models);
+
+        // Check if models have support_streaming field
+        if (Array.isArray(remote_models)) {
+          remote_models.forEach((model, index) => {
+            console.log(`[JSON Config Debug] Model ${index}:`, {
+              name: model.name,
+              displayName: model.displayName,
+              support_streaming: model.support_streaming,
+              available: model.available,
+              provider: model.provider
+            });
+          });
+        }
+
+        // Get current config before update
+        const currentConfig = appConfig;
+        console.log("[JSON Config Debug] Current config models before update:", currentConfig.models.length);
+
         appConfig.update(
-          (config) => (config.models = remote_models as any as LLMModel[]),
+          (config) => {
+            console.log("[JSON Config Debug] Updating config.models...");
+            config.models = remote_models as any as LLMModel[];
+            console.log("[JSON Config Debug] Config updated. New models count:", config.models.length);
+
+            // Check if current model exists in new models and update its support_streaming
+            const currentModelName = config.modelConfig.model;
+            const currentModelInNewList = remote_models.find((m: any) => m.name === currentModelName);
+
+            if (currentModelInNewList && currentModelInNewList.support_streaming !== undefined) {
+              console.log("[JSON Config Debug] Updating global modelConfig.support_streaming for current model:", currentModelName);
+              console.log("[JSON Config Debug] Old support_streaming:", config.modelConfig.support_streaming);
+              console.log("[JSON Config Debug] New support_streaming:", currentModelInNewList.support_streaming);
+
+              config.modelConfig.support_streaming = currentModelInNewList.support_streaming;
+
+              console.log("[JSON Config Debug] Global modelConfig updated:", {
+                model: config.modelConfig.model,
+                support_streaming: config.modelConfig.support_streaming
+              });
+            } else {
+              console.log("[JSON Config Debug] Current model not found in new list or no support_streaming defined");
+            }
+          }
         );
-        console.log("Models loaded from file successfully");
+
+        // Verify the update
+        setTimeout(() => {
+          const updatedConfig = appConfig;
+          console.log("[JSON Config Debug] Verification - Updated config models:", updatedConfig.models.length);
+          updatedConfig.models.forEach((model, index) => {
+            console.log(`[JSON Config Debug] Verification - Model ${index}:`, {
+              name: model.name,
+              displayName: model.displayName,
+              support_streaming: (model as any).support_streaming,
+              available: model.available
+            });
+          });
+        }, 100);
+
+        console.log("[JSON Config Debug] Models loaded from file successfully");
       } catch (error) {
-        console.error("Error parsing JSON file:", error);
+        console.error("[JSON Config Debug] Error parsing JSON file:", error);
         alert("Error: Invalid JSON file format");
       }
     };
+
+    reader.onerror = (error) => {
+      console.error("[JSON Config Debug] FileReader error:", error);
+    };
+
     reader.readAsText(file);
 
     // Reset the input value so the same file can be selected again
@@ -113,14 +181,33 @@ export function ModelConfigList(props: {
           <Select
             value={props.modelConfig.model}
             onChange={(e) => {
+              const newModelName = e.currentTarget.value;
+              console.log("[Model Selection Debug] Model changed to:", newModelName);
+
+              // Find the selected model in the available models
+              const selectedModel = appConfig.models.find(m => m.name === newModelName);
+              console.log("[Model Selection Debug] Selected model object:", selectedModel);
+              console.log("[Model Selection Debug] Selected model support_streaming:", (selectedModel as any)?.support_streaming);
+
               props.updateConfig(
-                (config) =>
-                (config.model = ModalConfigValidator.model(
-                  e.currentTarget.value,
-                )),
+                (config) => {
+                  console.log("[Model Selection Debug] Before update - config.model:", config.model);
+                  console.log("[Model Selection Debug] Before update - config.support_streaming:", config.support_streaming);
+                  config.model = ModalConfigValidator.model(newModelName);
+
+                  // Auto-update support_streaming based on model definition
+                  if (selectedModel && (selectedModel as any).support_streaming !== undefined) {
+                    const newStreamingValue = (selectedModel as any).support_streaming;
+                    console.log("[Model Selection Debug] Auto-updating support_streaming from model definition:", newStreamingValue);
+                    config.support_streaming = newStreamingValue;
+                  }
+
+                  console.log("[Model Selection Debug] After update - config.model:", config.model);
+                  console.log("[Model Selection Debug] After update - config.support_streaming:", config.support_streaming);
+                }
               );
               // 更新模型特定配置
-              setModelSpecificConfig(getModelConfig(e.currentTarget.value));
+              setModelSpecificConfig(getModelConfig(newModelName));
             }}
           >
             {appConfig.models
@@ -255,6 +342,29 @@ export function ModelConfigList(props: {
                 e.currentTarget.checked),
             )
           }
+        ></input>
+      </ListItem>
+
+      <ListItem
+        title="Support Streaming"
+        subTitle="Enable streaming responses for real-time output"
+      >
+        <input
+          type="checkbox"
+          checked={props.modelConfig.support_streaming ?? false}
+          onChange={(e) => {
+            const newValue = e.currentTarget.checked;
+            console.log("[Support Streaming Debug] Checkbox changed to:", newValue);
+            console.log("[Support Streaming Debug] Current model:", props.modelConfig.model);
+
+            props.updateConfig(
+              (config) => {
+                console.log("[Support Streaming Debug] Before update:", config.support_streaming);
+                config.support_streaming = newValue;
+                console.log("[Support Streaming Debug] After update:", config.support_streaming);
+              }
+            );
+          }}
         ></input>
       </ListItem>
 
