@@ -186,3 +186,89 @@ if (selectedModel && (selectedModel as any).support_streaming !== undefined) {
 - **Root Cause**: JSON loading only updated model list, not global model configuration
 - **Solution**: Added auto-configuration logic that updates global modelConfig when loading JSON files or changing models
 - **Result**: Streaming settings from JSON configs now properly inherit to new sessions and chat functionality
+
+## 2025-08-19 - Changed Default Streaming Behavior to Enabled
+
+### Summary
+Updated the default behavior for `support_streaming` from `false` to `true`, making streaming the default mode for all models unless explicitly disabled. This provides a better user experience with real-time responses by default.
+
+### Changes Made
+
+#### Files Modified
+- `app/store/config.ts` - Updated default value and migration logic
+- `app/store/chat.ts` - Updated fallback logic and session migration
+- `app/components/model-config.tsx` - Updated UI default behavior
+
+#### Detailed Changes
+
+1. **Default Configuration (`app/store/config.ts`)**
+   - Changed `support_streaming: false` → `support_streaming: true` in DEFAULT_CONFIG
+   - Updated `support_streaming(x: boolean)` validator to return `true` for non-boolean values
+   - Updated version to 4.0 with new migration logic
+   - Added migration step to convert existing `false` values to `true` for better UX
+
+2. **Chat Logic (`app/store/chat.ts`)**
+   - Updated all fallback logic from `?? false` → `?? true`
+   - Updated version to 4.2 with session migration
+   - Added migration to automatically enable streaming for existing sessions with `false` values
+   - Maintains user choice for explicitly set preferences
+
+3. **UI Components (`app/components/model-config.tsx`)**
+   - Updated checkbox default from `?? false` → `?? true`
+   - Ensures UI reflects new default behavior
+
+#### Code Changes
+```typescript
+// Before: Streaming disabled by default
+export const DEFAULT_CONFIG = {
+  modelConfig: {
+    support_streaming: false, // Old default
+  }
+};
+
+// After: Streaming enabled by default
+export const DEFAULT_CONFIG = {
+  modelConfig: {
+    support_streaming: true, // New default
+  }
+};
+
+// Validator function updated
+support_streaming(x: boolean) {
+  return typeof x === "boolean" ? x : true; // Changed from false to true
+}
+
+// Fallback logic updated throughout codebase
+const streaming = modelConfig.support_streaming ?? true; // Changed from ?? false
+```
+
+### Features Updated
+- **Default Behavior**: All models now default to streaming enabled
+- **JSON Config Loading**: Models without `support_streaming` field are treated as streaming-enabled
+- **New Sessions**: Automatically created with streaming enabled
+- **Migration Logic**: Existing configurations smoothly upgraded to new default
+- **User Choice Preserved**: Explicit `false` values are still respected
+
+### User Experience Impact
+1. **New Users**: Get streaming responses by default for better real-time experience
+2. **Existing Users**: Automatically upgraded to streaming enabled (can still disable manually)
+3. **JSON Configs**: Models without streaming field now default to enabled instead of disabled
+4. **Manual Control**: Users can still explicitly disable streaming via UI checkbox
+
+### Backward Compatibility
+- **Seamless Migration**: Automatic upgrade from v3.9/4.1 to v4.0/4.2
+- **User Preferences**: Explicit user choices are preserved during migration
+- **Configuration Files**: Old JSON configs work without modification
+- **API Compatibility**: No breaking changes to existing interfaces
+
+### Technical Details
+- **Migration Versions**: Config v4.0, Chat v4.2
+- **Default Logic**: `support_streaming ?? true` throughout codebase
+- **Validator Behavior**: Non-boolean values default to `true`
+- **UI Behavior**: Checkbox defaults to checked when field is undefined
+
+### Rationale
+- **Better UX**: Streaming provides immediate feedback and better perceived performance
+- **Modern Expectation**: Users expect real-time responses in chat applications
+- **Opt-out vs Opt-in**: Easier to disable streaming than to discover and enable it
+- **Consistency**: Aligns with most modern chat applications' default behavior

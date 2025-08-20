@@ -158,7 +158,7 @@ const DEFAULT_CHAT_STATE = {
   lastAction: '',
   currentSessionIndex: 0,
 };
-const CURRENT_STORAGE_VERSION = 4.1
+const CURRENT_STORAGE_VERSION = 4.2
 
 import { indexedDB as fakeIndexedDB } from "fake-indexeddb";
 
@@ -591,7 +591,7 @@ export const useChatStore = createPersistStore(
 
         const botMessage: ChatMessage = createMessage({
           role: "assistant",
-          streaming: modelConfig.support_streaming ?? false,
+          streaming: modelConfig.support_streaming ?? true,
           model: modelConfig.model,
         });
 
@@ -626,7 +626,7 @@ export const useChatStore = createPersistStore(
         // }
 
         // make request
-        const streamingEnabled = modelConfig.support_streaming ?? false;
+        const streamingEnabled = modelConfig.support_streaming ?? true;
         console.log("[Chat Debug] Streaming decision:", {
           support_streaming: modelConfig.support_streaming,
           streamingEnabled: streamingEnabled,
@@ -907,7 +907,7 @@ export const useChatStore = createPersistStore(
             ),
             config: {
               ...modelConfig,
-              stream: modelConfig.support_streaming ?? false,
+              stream: modelConfig.support_streaming ?? true,
               model: getSummarizeModel(session.mask.modelConfig.model),
             },
             onUpdate(message) {
@@ -1012,8 +1012,18 @@ export const useChatStore = createPersistStore(
       if (version < 4.1) {
         newState.sessions.forEach((s) => {
           if (!s.mask.modelConfig.hasOwnProperty("support_streaming")) {
-            // Default to false for backward compatibility
-            s.mask.modelConfig.support_streaming = false;
+            // Default to true for backward compatibility
+            s.mask.modelConfig.support_streaming = true;
+          }
+        });
+      }
+
+      // Change default support_streaming from false to true
+      if (version < 4.2) {
+        newState.sessions.forEach((s) => {
+          if (s.mask.modelConfig.support_streaming === false) {
+            // Update existing false values to true for better user experience
+            s.mask.modelConfig.support_streaming = true;
           }
         });
       }

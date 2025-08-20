@@ -1,0 +1,234 @@
+[
+
+    {
+            "name": "claude-4-1-opus-with-vision",
+            "available": true,
+            "modelId": "us.anthropic.claude-opus-4-1-20250805-v1:0",
+            "anthropic_version": "bedrock-2023-05-31",
+            "provider": {
+                    "id": "aws",
+                    "providerName": "AWS",
+                    "providerType": "aws"
+            },
+            "displayName": "Claude 4.1 Opus",
+	    "support_streaming": true
+    },
+        {
+                "name": "claude-4-opus-with-vision",
+                "available": true,
+                "modelId": "us.anthropic.claude-opus-4-20250514-v1:0",
+                "anthropic_version": "bedrock-2023-05-31",
+                "provider": {
+                        "id": "aws",
+                        "providerName": "AWS",
+                        "providerType": "aws"
+                },
+                "displayName": "Claude 4 Opus",
+                "support_streaming": true
+        },
+
+        {
+                "name": "claude-4-sonnet-with-vision",
+                "available": true,
+                "modelId": "us.anthropic.claude-sonnet-4-20250514-v1:0",
+                "anthropic_version": "bedrock-2023-05-31",
+                "provider": {
+                        "id": "aws",
+                        "providerName": "AWS",
+                        "providerType": "aws"
+                },
+                "displayName": "Claude 4 Sonnet",
+                "support_streaming": true
+        },
+
+        {
+                "name": "deepseek-r1",
+                "available": true,
+                "modelId": "us.deepseek.r1-v1:0",
+                "anthropic_version": "bedrock-2023-05-31",
+                "provider": {
+                        "id": "aws",
+                        "providerName": "AWS",
+                        "providerType": "aws"
+                },
+                "displayName": "DeepSeek-R1",
+                "support_streaming": true
+        },
+	{
+                "name": "claude-3.7-sonnet",
+                "available": true,
+                "modelId": "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+                "anthropic_version": "bedrock-2023-05-31",
+                "provider": {
+                        "id": "aws",
+                        "providerName": "AWS",
+                        "providerType": "aws"
+                },
+                "displayName": "Claude 3.7 Sonnet",
+                "support_streaming": true
+        },
+
+        {
+                "name": "amazon-nova-pro-with-vision",
+                "available": true,
+                "modelId": "amazon.nova-pro-v1:0",
+		"anthropic_version": "bedrock-2023-05-31",
+                "provider": {
+                        "id": "aws",
+                        "providerName": "AWS",
+                        "providerType": "aws"
+                },
+                "displayName": "Amazon Nova Pro",
+                "support_streaming": true
+        },
+
+        {
+                "name": "amazon-nova-lite-with-vision",
+                "available": true,
+                "modelId": "amazon.nova-lite-v1:0",
+		"anthropic_version": "bedrock-2023-05-31",
+                "provider": {
+                        "id": "aws",
+                        "providerName": "AWS",
+                        "providerType": "aws"
+                },
+                "displayName": "Amazon Nova Lite",
+                "support_streaming": true
+        },
+	{
+                "name": "amazon-nova-micro",
+                "available": true,
+                "modelId": "amazon.nova-micro-v1:0",
+		"anthropic_version": "bedrock-2023-05-31",
+                "provider": {
+                        "id": "aws",
+                        "providerName": "AWS",
+                        "providerType": "aws"
+                },
+                "displayName": "Amazon Nova Micro",
+                "support_streaming": true
+        },
+
+		
+	{
+		"name": "claude-3.5-sonnet-v2",
+		"available": true,
+		"modelId": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+		"anthropic_version": "bedrock-2023-05-31",
+		"provider": {
+			"id": "aws",
+			"providerName": "AWS",
+			"providerType": "aws"
+		},
+		"displayName": "Claude3.5 sonnet v2",
+		"support_streaming": true
+	},
+
+	  {
+		  "name": "claude-3.5-haiku",
+		  "available": true,
+		  "modelId": "anthropic.claude-3-5-haiku-20241022-v1:0",
+		  "anthropic_version": "bedrock-2023-05-31",
+		  "provider": {
+			  "id": "aws",
+			  "providerName": "AWS",
+			  "providerType": "aws"
+		  },
+		  "displayName": "Claude3.5 haiku",
+		  "support_streaming": true
+	  },
+
+
+	    {
+		    "name": "claude-3.5-sonnet",
+		    "available": true,
+		    "modelId": "anthropic.claude-3-5-sonnet-20240620-v1:0",
+		    "anthropic_version": "bedrock-2023-05-31",
+		    "provider": {
+			    "id": "aws",
+			    "providerName": "AWS",
+			    "providerType": "aws"
+		    },
+		    "displayName": "Claude3.5 sonnet",
+		    "support_streaming": true
+		        },
+    {
+        "name": "claude-3-sonnet",
+        "available": true,
+        "modelId": "anthropic.claude-3-sonnet-20240229-v1:0",
+        "anthropic_version": "bedrock-2023-05-31",
+        "provider": {
+            "id": "aws",
+            "providerName": "AWS",
+            "providerType": "aws"
+        },
+        "displayName": "Claude3 sonnet",
+        "support_streaming": true
+    },
+    {
+        "name": "claude-3-haiku",
+        "available": true,
+        "modelId": "anthropic.claude-3-haiku-20240307-v1:0",
+        "anthropic_version": "bedrock-2023-05-31",
+        "provider": {
+            "id": "aws",
+            "providerName": "AWS",
+            "providerType": "aws"
+        },
+        "displayName": "Claude3 haiku",
+        "support_streaming": true
+    },
+    {
+        "name": "claude-3-opus",
+        "available": true,
+        "modelId": "anthropic.claude-3-opus-20240229-v1:0",
+        "anthropic_version": "bedrock-2023-05-31",
+        "provider": {
+            "id": "aws",
+            "providerName": "AWS",
+            "providerType": "aws"
+        },
+        "displayName": "Claude3 opus",
+        "support_streaming": true
+    },
+    {
+        "name": "llama3.2-11b",
+        "available": true,
+        "modelId": "meta.llama3-2-11b-instruct-v1:0",
+        "anthropic_version": "bedrock-2023-05-31",
+        "provider": {
+            "id": "aws",
+            "providerName": "AWS",
+            "providerType": "aws"
+        },
+        "displayName": "Llama 3.2 90B Instruct",
+        "support_streaming": true
+    },
+    {
+        "name": "llama3.2-90b",
+        "available": true,
+        "modelId": "meta.llama3-2-90b-instruct-v1:0",
+        "anthropic_version": "bedrock-2023-05-31",
+        "provider": {
+            "id": "aws",
+            "providerName": "AWS",
+            "providerType": "aws"
+        },
+        "displayName": "Llama 3.2 90B Instruct",
+        "support_streaming": true
+    },
+    {
+        "name": "llama3.3-70b",
+        "available": true,
+        "modelId": "meta.llama3-3-70b-instruct-v1:0",
+        "anthropic_version": "bedrock-2023-05-31",
+        "provider": {
+            "id": "aws",
+            "providerName": "AWS",
+            "providerType": "aws"
+        },
+        "displayName": "Llama 3.3 70B Instruct",
+        "support_streaming": true
+    }
+
+]

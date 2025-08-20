@@ -58,7 +58,7 @@ export const DEFAULT_CONFIG = {
     compressMessageLengthThreshold: 1000,
     enableInjectSystemPrompts: true,
     template: DEFAULT_INPUT_TEMPLATE,
-    support_streaming: false,
+    support_streaming: true,
     reasoning_config: {
       type: "enabled",
       budget_tokens: 1024,
@@ -103,7 +103,7 @@ export const ModalConfigValidator = {
     return limitNumber(x, 0, 1, 1);
   },
   support_streaming(x: boolean) {
-    return typeof x === "boolean" ? x : false;
+    return typeof x === "boolean" ? x : true;
   },
   reasoning_config(x: any, model: string) {
     console.log("reasoning_config", x, model);
@@ -148,7 +148,7 @@ export const useAppConfig = createPersistStore(
   }),
   {
     name: StoreKey.Config,
-    version: 3.9,
+    version: 4.0,
     migrate(persistedState, version) {
       const state = persistedState as ChatConfig;
 
@@ -181,9 +181,17 @@ export const useAppConfig = createPersistStore(
 
       if (version < 3.9) {
         // Add support_streaming field for backward compatibility
-        // Default to false for existing configurations
+        // Default to true for existing configurations
         if (!state.modelConfig.hasOwnProperty('support_streaming')) {
-          state.modelConfig.support_streaming = false;
+          state.modelConfig.support_streaming = true;
+        }
+      }
+
+      if (version < 4.0) {
+        // Change default support_streaming from false to true
+        // Update existing false values to true for better user experience
+        if (state.modelConfig.support_streaming === false) {
+          state.modelConfig.support_streaming = true;
         }
       }
 

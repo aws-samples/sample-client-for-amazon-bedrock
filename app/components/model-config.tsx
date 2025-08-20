@@ -351,7 +351,7 @@ export function ModelConfigList(props: {
       >
         <input
           type="checkbox"
-          checked={props.modelConfig.support_streaming ?? false}
+          checked={props.modelConfig.support_streaming ?? true}
           onChange={(e) => {
             const newValue = e.currentTarget.checked;
             console.log("[Support Streaming Debug] Checkbox changed to:", newValue);
