@@ -70,6 +70,7 @@ export interface LLMModel {
   displayName: string;
   provider: LLMModelProvider;
   support_image_understanding?: boolean;
+  region?: string;
 }
 
 export interface LLMModelProvider {

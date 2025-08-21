@@ -1,5 +1,5 @@
 import {
-  ModalConfigValidator, ModelConfig, useAppConfig, useAccessStore,
+  ModalConfigValidator, ModelConfig, useAppConfig, useAccessStore, useModelConfigsStore,
 } from "../store";
 import { getServerSideConfig } from "../config/server";
 import { useEffect, useState, useRef } from "react";
@@ -12,6 +12,8 @@ import ResetIcon from "../icons/reload.svg";
 import UploadIcon from "../icons/upload.svg";
 import { LLMModel } from "../client/api";
 import { DEFAULT_MODELS } from "@/app/constant";
+import { ModelDropdown } from "./model-dropdown";
+import dropdownStyles from "./model-dropdown.module.scss";
 
 // 每个模型的特定配置定义
 const MODEL_SPECIFIC_CONFIGS = {
@@ -31,6 +33,11 @@ export function ModelConfigList(props: {
 }) {
   const appConfig = useAppConfig();
   const accessStore = useAccessStore();
+  const modelConfigsStore = useModelConfigsStore();
+
+  // Subscribe to store changes properly
+  const defaultModel = modelConfigsStore.defaultModel;
+  const currentConfigModel = modelConfigsStore.currentConfigModel;
 
   const { provider, useBRProxy, BRProxyUrl, openaiApiKey } = accessStore;
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -176,99 +183,115 @@ export function ModelConfigList(props: {
 
   return (
     <>
-      <ListItem title={Locale.Settings.Model}>
-        <div className="password-input-container">
-          <Select
-            value={props.modelConfig.model}
-            onChange={(e) => {
-              const newModelName = e.currentTarget.value;
-              console.log("[Model Selection Debug] Model changed to:", newModelName);
+      <ListItem title="Model Configuration">
+        <div className={dropdownStyles["model-config-container"]}>
+          {/* Enhanced Model Dropdown */}
+          <ModelDropdown
+            models={appConfig.models}
+            selectedModel={currentConfigModel}
+            defaultModel={defaultModel}
+            onModelSelect={(modelName) => {
+              console.log("[Model Config Debug] Switching config view to:", modelName);
+              modelConfigsStore.setCurrentConfigModel(modelName);
+              // Update the model-specific config display
+              setModelSpecificConfig(getModelConfig(modelName));
+            }}
+            onDefaultToggle={(modelName) => {
+              console.log("[Model Config Debug] onDefaultToggle called for model:", modelName);
+              console.log("[Model Config Debug] Current default model:", defaultModel);
+              modelConfigsStore.setDefaultModel(modelName);
+              console.log("[Model Config Debug] New default model set:", modelName);
 
-              // Find the selected model in the available models
-              const selectedModel = appConfig.models.find(m => m.name === newModelName);
-              console.log("[Model Selection Debug] Selected model object:", selectedModel);
-              console.log("[Model Selection Debug] Selected model support_streaming:", (selectedModel as any)?.support_streaming);
+              // Update the global model config to match the new default
+              props.updateConfig((config) => {
+                config.model = ModalConfigValidator.model(modelName);
 
-              props.updateConfig(
-                (config) => {
-                  console.log("[Model Selection Debug] Before update - config.model:", config.model);
-                  console.log("[Model Selection Debug] Before update - config.support_streaming:", config.support_streaming);
-                  config.model = ModalConfigValidator.model(newModelName);
+                // Auto-update support_streaming based on model definition
+                const selectedModel = appConfig.models.find(m => m.name === modelName);
+                if (selectedModel && (selectedModel as any).support_streaming !== undefined) {
+                  config.support_streaming = (selectedModel as any).support_streaming;
+                }
+              });
+            }}
+          />
 
-                  // Auto-update support_streaming based on model definition
-                  if (selectedModel && (selectedModel as any).support_streaming !== undefined) {
-                    const newStreamingValue = (selectedModel as any).support_streaming;
-                    console.log("[Model Selection Debug] Auto-updating support_streaming from model definition:", newStreamingValue);
-                    config.support_streaming = newStreamingValue;
+          {/* Model-Specific Configuration Panel */}
+          <div className={dropdownStyles["model-specific-config"]}>
+            <h4>Configure: {appConfig.models.find(m => m.name === currentConfigModel)?.displayName || currentConfigModel}</h4>
+
+            {/* Region Configuration */}
+            <div className={dropdownStyles["config-item"]}>
+              <label>Region Override</label>
+              <input
+                type="text"
+                placeholder="Leave empty to use system region"
+                value={modelConfigsStore.getModelConfig(currentConfigModel).region || ""}
+                onChange={(e) => {
+                  const newRegion = e.currentTarget.value;
+                  console.log("[Model Config Debug] Updating region for", currentConfigModel, "to:", newRegion);
+                  modelConfigsStore.updateModelConfig(currentConfigModel, {
+                    region: newRegion,
+                  });
+                }}
+              />
+              <small>
+                System region: {accessStore.awsRegion || "not set"} |
+                Effective: {modelConfigsStore.getEffectiveRegion(currentConfigModel, accessStore.awsRegion)}
+              </small>
+            </div>
+          </div>
+
+          {/* Model Management Buttons */}
+          <div className="model-management-buttons" style={{ marginTop: "16px", display: "flex", gap: "8px" }}>
+            <IconButton
+              onClick={async () => {
+                try {
+                  const http_headers: any = {
+                  };
+                  let model_url = "https://www.agentnumber47.com/bedrock/bedrock-models.json";
+                  if (provider === "AWS" && useBRProxy === "True") {
+                    http_headers["Authorization"] = `Bearer ${openaiApiKey}`;
+                    model_url = BRProxyUrl + "/user/model/list-for-brclient?f=";
                   }
 
-                  console.log("[Model Selection Debug] After update - config.model:", config.model);
-                  console.log("[Model Selection Debug] After update - config.support_streaming:", config.support_streaming);
+                  const response = await fetch(
+                    model_url + "?f=" + new Date().getTime().toString(),
+                    {
+                      method: 'GET',
+                      headers: http_headers,
+                    },
+                  );
+                  let remote_models = await response.json();
+                  if (provider === "AWS" && useBRProxy === "True") {
+                    remote_models = remote_models.data;
+                  }
+                  appConfig.update(
+                    (config) =>
+                      (config.models = remote_models as any as LLMModel[]),
+                  );
+                } catch (e) {
+                  console.error(e);
                 }
-              );
-              // 更新模型特定配置
-              setModelSpecificConfig(getModelConfig(newModelName));
-            }}
-          >
-            {appConfig.models
-              .filter((v) => v.available)
-              .map((v, i) => (
-                <option value={v.name} key={i}>
-                  {v.displayName || v.name}({v.provider?.providerName})
-                </option>
-              ))}
-          </Select>
+              }}
+              icon={<ResetIcon />}
+            />
 
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileLoad}
+              accept=".json"
+              style={{ display: 'none' }}
+            />
 
-          <IconButton
-            onClick={async () => {
-              try {
-                const http_headers: any = {
-                };
-                let model_url = "https://www.agentnumber47.com/bedrock/bedrock-models.json";
-                if (provider === "AWS" && useBRProxy === "True") {
-                  http_headers["Authorization"] = `Bearer ${openaiApiKey}`;
-                  model_url = BRProxyUrl + "/user/model/list-for-brclient?f=";
-                }
-
-                const response = await fetch(
-                  model_url + "?f=" + new Date().getTime().toString(),
-                  {
-                    method: 'GET',
-                    headers: http_headers,
-                  },
-                );
-                let remote_models = await response.json();
-                if (provider === "AWS" && useBRProxy === "True") {
-                  remote_models = remote_models.data;
-                }
-                appConfig.update(
-                  (config) =>
-                    (config.models = remote_models as any as LLMModel[]),
-                );
-              } catch (e) {
-                console.error(e);
-              }
-            }}
-            icon={<ResetIcon />}
-          />
-
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileLoad}
-            accept=".json"
-            style={{ display: 'none' }}
-          />
-
-          <IconButton
-            onClick={() => {
-              fileInputRef.current?.click();
-            }}
-            icon={<UploadIcon />}
-            title="Load models from local JSON file"
-          />
-
+            <IconButton
+              onClick={() => {
+                fileInputRef.current?.click();
+              }}
+              icon={<UploadIcon />}
+              title="Load models from local JSON file"
+            />
+          </div>
         </div>
       </ListItem>
       <ListItem

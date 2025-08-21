@@ -15,6 +15,7 @@ import { createJSONStorage, StateStorage } from 'zustand/middleware'
 import Locale, { getLang } from "../locales";
 import { showToast } from "../components/ui-lib";
 import { ModelConfig, ModelType, useAppConfig } from "./config";
+import { useModelConfigsStore } from "./model-configs";
 import { createEmptyMask, Mask } from "./mask";
 import {
   DEFAULT_INPUT_TEMPLATE,
@@ -353,6 +354,8 @@ export const useChatStore = createPersistStore(
       newSession(mask?: Mask) {
         console.log("[New Session Debug] Creating new session...");
         const session = createEmptySession();
+        const modelConfigsStore = useModelConfigsStore.getState();
+
         console.log("[New Session Debug] Empty session created with mask:", {
           id: session.mask.id,
           modelConfig: session.mask.modelConfig,
@@ -386,8 +389,23 @@ export const useChatStore = createPersistStore(
             support_streaming: session.mask.modelConfig.support_streaming
           });
         } else {
-          console.log("[New Session Debug] No mask provided, using default session");
-          console.log("[New Session Debug] Default session mask config:", {
+          console.log("[New Session Debug] No mask provided, using default session with default model");
+
+          // Use the default model from model configs store
+          const defaultModel = modelConfigsStore.defaultModel;
+          const appConfig = useAppConfig.getState();
+          const selectedModel = appConfig.models.find(m => m.name === defaultModel);
+
+          console.log("[New Session Debug] Setting default model:", defaultModel);
+          session.mask.modelConfig.model = defaultModel as ModelType;
+
+          // Auto-update support_streaming based on model definition
+          if (selectedModel && (selectedModel as any).support_streaming !== undefined) {
+            session.mask.modelConfig.support_streaming = (selectedModel as any).support_streaming;
+            console.log("[New Session Debug] Auto-updating support_streaming for default model:", (selectedModel as any).support_streaming);
+          }
+
+          console.log("[New Session Debug] Final session mask config:", {
             model: session.mask.modelConfig.model,
             support_streaming: session.mask.modelConfig.support_streaming
           });
