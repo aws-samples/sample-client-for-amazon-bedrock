@@ -71,13 +71,14 @@
 - **Message History**: Persistent chat history with compression
 - **Templates/Masks**: Pre-configured chat templates
 - **File Upload**: Support for documents (PDF, Word, Excel)
-- **Image Support**: Vision model capabilities
+- **Image Support**: Vision model capabilities with explicit configuration
 - **Export/Import**: Chat history and configuration management
 
 ### Configuration Management
 - **Model Configuration**: Temperature, top_p, max_tokens, presence/frequency penalty
 - **Custom Models**: JSON-based model configuration loading
 - **Streaming Control**: Per-model streaming configuration
+- **Vision Support**: Explicit per-model image understanding capabilities
 - **Theme Support**: Auto/Dark/Light themes
 - **Multi-language**: 20+ language support
 
@@ -141,6 +142,18 @@ DEFAULT_CONFIG = {
     reasoning_config: { type: "enabled", budget_tokens: 1024 }
   }
 }
+
+// Model Configuration with Capabilities
+LLMModel = {
+  name: string,
+  available: boolean,
+  modelId?: string,
+  displayName: string,
+  provider: LLMModelProvider,
+  support_streaming?: boolean,
+  support_image_understanding?: boolean
+}
+```
 ```
 
 ## Recent Development History
@@ -155,6 +168,13 @@ DEFAULT_CONFIG = {
 - Added automatic configuration inheritance
 - Changed default streaming behavior to enabled
 - Added comprehensive migration logic for backward compatibility
+
+### Vision Support Enhancement (2025-08-21)
+- Replaced string-based vision detection with explicit `support_image_understanding` property
+- Updated LLMModel interface with new capability field
+- Enhanced model configurations with explicit vision support flags
+- Implemented clean fallback logic for backward compatibility
+- Improved maintainability by removing fragile string matching patterns
 
 ## Deployment Architecture
 

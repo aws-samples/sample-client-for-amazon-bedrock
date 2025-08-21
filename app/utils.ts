@@ -298,24 +298,31 @@ export function getMessageImages(message: RequestMessage): string[] {
 }
 
 export function isVisionModel(model: string, models?: any) {
-  if (
-    // model.startsWith("gpt-4-vision") ||
-    // model.startsWith("gemini-pro-vision") ||
+  // First, try to find the model in the models array and check the explicit property
+  if (models) {
+    const currentModel = models.find((m: any) => m.name === model);
+    if (currentModel) {
+      // Use the explicit support_image_understanding property if available
+      if (currentModel.support_image_understanding !== undefined) {
+        return currentModel.support_image_understanding;
+      }
+      // Fallback to the old multiple property for backward compatibility
+      if (currentModel.multiple) {
+        return true;
+      }
+    }
+  }
+
+  // Fallback for backward compatibility (can be removed later)
+  // Keep some basic patterns for models not yet in the configuration
+  return (
     model.includes("vision") ||
+    model.includes("claude-3") ||
     model.includes("claude3") ||
     (model.includes("claude") && model.includes("3")) ||
     model.includes("Claude3") ||
-    (model.includes("Claude") && model.includes("3")) ||
-    model.includes("claude-3")
-  ) {
-    return true;
-  }
-  const currentModel = models?.find((v: any) => v.name === model);
-
-  if (currentModel?.multiple) {
-    return true;
-  }
-  return false;
+    (model.includes("Claude") && model.includes("3"))
+  );
 }
 
 /**

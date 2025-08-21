@@ -11,7 +11,8 @@
                     "providerType": "aws"
             },
             "displayName": "Claude 4.1 Opus",
-	    "support_streaming": true
+	    "support_streaming": true,
+	    "support_image_understanding": true
     },
         {
                 "name": "claude-4-opus-with-vision",
@@ -24,7 +25,8 @@
                         "providerType": "aws"
                 },
                 "displayName": "Claude 4 Opus",
-                "support_streaming": true
+                "support_streaming": true,
+                "support_image_understanding": true
         },
 
         {
@@ -38,7 +40,8 @@
                         "providerType": "aws"
                 },
                 "displayName": "Claude 4 Sonnet",
-                "support_streaming": true
+                "support_streaming": true,
+                "support_image_understanding": true
         },
 
         {
@@ -52,7 +55,8 @@
                         "providerType": "aws"
                 },
                 "displayName": "DeepSeek-R1",
-                "support_streaming": true
+                "support_streaming": true,
+                "support_image_understanding": false
         },
 	{
                 "name": "claude-3.7-sonnet",
@@ -65,7 +69,8 @@
                         "providerType": "aws"
                 },
                 "displayName": "Claude 3.7 Sonnet",
-                "support_streaming": true
+                "support_streaming": true,
+                "support_image_understanding": true
         },
 
         {
@@ -79,7 +84,8 @@
                         "providerType": "aws"
                 },
                 "displayName": "Amazon Nova Pro",
-                "support_streaming": true
+                "support_streaming": true,
+                "support_image_understanding": true
         },
 
         {
@@ -93,7 +99,8 @@
                         "providerType": "aws"
                 },
                 "displayName": "Amazon Nova Lite",
-                "support_streaming": true
+                "support_streaming": true,
+                "support_image_understanding": true
         },
 	{
                 "name": "amazon-nova-micro",
@@ -106,10 +113,11 @@
                         "providerType": "aws"
                 },
                 "displayName": "Amazon Nova Micro",
-                "support_streaming": true
+                "support_streaming": true,
+                "support_image_understanding": false
         },
 
-		
+
 	{
 		"name": "claude-3.5-sonnet-v2",
 		"available": true,
@@ -121,7 +129,8 @@
 			"providerType": "aws"
 		},
 		"displayName": "Claude3.5 sonnet v2",
-		"support_streaming": true
+		"support_streaming": true,
+		"support_image_understanding": true
 	},
 
 	  {
@@ -135,7 +144,8 @@
 			  "providerType": "aws"
 		  },
 		  "displayName": "Claude3.5 haiku",
-		  "support_streaming": true
+		  "support_streaming": true,
+		  "support_image_understanding": true
 	  },
 
 
@@ -150,7 +160,8 @@
 			    "providerType": "aws"
 		    },
 		    "displayName": "Claude3.5 sonnet",
-		    "support_streaming": true
+		    "support_streaming": true,
+		    "support_image_understanding": true
 		        },
     {
         "name": "claude-3-sonnet",
@@ -163,7 +174,8 @@
             "providerType": "aws"
         },
         "displayName": "Claude3 sonnet",
-        "support_streaming": true
+        "support_streaming": true,
+        "support_image_understanding": true
     },
     {
         "name": "claude-3-haiku",
@@ -176,7 +188,8 @@
             "providerType": "aws"
         },
         "displayName": "Claude3 haiku",
-        "support_streaming": true
+        "support_streaming": true,
+        "support_image_understanding": true
     },
     {
         "name": "claude-3-opus",
@@ -189,7 +202,8 @@
             "providerType": "aws"
         },
         "displayName": "Claude3 opus",
-        "support_streaming": true
+        "support_streaming": true,
+        "support_image_understanding": true
     },
     {
         "name": "llama3.2-11b",
@@ -202,7 +216,8 @@
             "providerType": "aws"
         },
         "displayName": "Llama 3.2 90B Instruct",
-        "support_streaming": true
+        "support_streaming": true,
+        "support_image_understanding": true
     },
     {
         "name": "llama3.2-90b",
@@ -215,7 +230,8 @@
             "providerType": "aws"
         },
         "displayName": "Llama 3.2 90B Instruct",
-        "support_streaming": true
+        "support_streaming": true,
+        "support_image_understanding": true
     },
     {
         "name": "llama3.3-70b",
@@ -228,7 +244,8 @@
             "providerType": "aws"
         },
         "displayName": "Llama 3.3 70B Instruct",
-        "support_streaming": true
+        "support_streaming": true,
+        "support_image_understanding": false
     }
 
 ]

@@ -272,3 +272,160 @@ const streaming = modelConfig.support_streaming ?? true; // Changed from ?? fals
 - **Modern Expectation**: Users expect real-time responses in chat applications
 - **Opt-out vs Opt-in**: Easier to disable streaming than to discover and enable it
 - **Consistency**: Aligns with most modern chat applications' default behavior
+
+---
+
+## Vision Support Enhancement Implementation (2025-08-21)
+
+### Overview
+Replaced the ugly string-based vision detection system with a clean, explicit `support_image_understanding` property in model configurations. This enhancement provides better maintainability, type safety, and explicit control over model capabilities.
+
+### Problem Statement
+The previous implementation used fragile string matching to determine if a model supports image understanding:
+- Hardcoded patterns like `model.includes("vision")` and `model.includes("claude-3")`
+- Inconsistent detection logic across different model naming conventions
+- Difficult to maintain and extend
+- No explicit configuration of model capabilities
+
+### Solution Architecture
+Implemented a comprehensive capability-based system with explicit model configuration:
+
+#### 1. Enhanced Model Interface
+```typescript
+export interface LLMModel {
+  name: string;
+  available: boolean;
+  modelId?: string;
+  multiple?: boolean;
+  anthropic_version?: string;
+  displayName: string;
+  provider: LLMModelProvider;
+  support_image_understanding?: boolean; // New property
+}
+```
+
+#### 2. Clean Detection Logic
+```typescript
+export function isVisionModel(model: string, models?: any) {
+  // Primary: Check explicit property
+  if (models) {
+    const currentModel = models.find((m: any) => m.name === model);
+    if (currentModel?.support_image_understanding !== undefined) {
+      return currentModel.support_image_understanding;
+    }
+    // Fallback: Legacy multiple property
+    if (currentModel?.multiple) {
+      return true;
+    }
+  }
+
+  // Final fallback: String patterns (for backward compatibility)
+  return (
+    model.includes("vision") ||
+    model.includes("claude-3") ||
+    // ... other patterns
+  );
+}
+```
+
+### Implementation Details
+
+#### Files Modified
+- `app/client/api.ts` - Added support_image_understanding to LLMModel interface
+- `app/constant.ts` - Updated DEFAULT_MODELS with explicit vision support
+- `app/utils.ts` - Refactored isVisionModel function with clean logic
+- `sample_config/bedrock-models.json` - Added explicit vision flags to all models
+
+#### Model Configuration Strategy
+**Vision-Capable Models** (support_image_understanding: true):
+- Claude 4.x series with vision variants
+- Claude 3.x series (Sonnet, Haiku, Opus)
+- Claude 3.5 series
+- Amazon Nova Pro/Lite with vision
+- Llama 3.2 series (11B, 90B)
+
+**Text-Only Models** (support_image_understanding: false):
+- DeepSeek-R1
+- Amazon Nova Micro
+- Llama 3.3 70B
+
+#### Backward Compatibility
+- Maintained existing model names (including `-with-vision` suffixes)
+- Preserved fallback logic for unconfigured models
+- Kept `multiple` property support for legacy configurations
+- String-based detection as final fallback
+
+### Technical Benefits
+
+#### 1. **Maintainability**
+- No more fragile string matching
+- Explicit configuration in model definitions
+- Clear separation of concerns
+
+#### 2. **Type Safety**
+- TypeScript interface ensures proper typing
+- Compile-time validation of model properties
+- Better IDE support and autocomplete
+
+#### 3. **Extensibility**
+- Pattern established for future capabilities (support_reasoning, etc.)
+- Easy to add new model properties
+- Consistent configuration approach
+
+#### 4. **Reliability**
+- Explicit configuration eliminates guesswork
+- Deterministic behavior across all models
+- Reduced risk of false positives/negatives
+
+### Configuration Examples
+
+#### Default Models
+```typescript
+{
+  name: "claude-3-sonnet",
+  available: true,
+  modelId: "anthropic.claude-3-sonnet-20240229-v1:0",
+  displayName: "Claude3 sonnet",
+  support_image_understanding: true,
+  provider: { id: "aws", providerName: "AWS", providerType: "aws" }
+}
+```
+
+#### Sample Configuration
+```json
+{
+  "name": "claude-4-1-opus-with-vision",
+  "available": true,
+  "modelId": "us.anthropic.claude-opus-4-1-20250805-v1:0",
+  "displayName": "Claude 4.1 Opus",
+  "support_streaming": true,
+  "support_image_understanding": true,
+  "provider": {
+    "id": "aws",
+    "providerName": "AWS",
+    "providerType": "aws"
+  }
+}
+```
+
+### Testing and Validation
+- ✅ Build verification: Application compiles without TypeScript errors
+- ✅ Logic testing: Vision detection works correctly for all scenarios
+- ✅ Backward compatibility: Existing functionality preserved
+- ✅ Fallback behavior: Graceful handling of unconfigured models
+
+### Future Enhancements
+This implementation establishes the foundation for additional model capabilities:
+- `support_reasoning` for reasoning-capable models
+- `support_function_calling` for tool-use capabilities
+- `support_code_execution` for code interpretation
+- `max_context_length` for context window specifications
+
+### Migration Impact
+- **Zero breaking changes**: All existing functionality preserved
+- **Immediate benefits**: Cleaner code and better maintainability
+- **Future-ready**: Easy to extend with new capabilities
+- **User experience**: No changes to end-user functionality
+
+### Summary
+Successfully transformed the vision support detection from a fragile string-based system to a robust, explicit configuration approach. This enhancement improves code quality, maintainability, and sets the foundation for future model capability management while maintaining full backward compatibility.

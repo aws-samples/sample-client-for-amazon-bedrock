@@ -69,6 +69,7 @@ export interface LLMModel {
   anthropic_version?: string;
   displayName: string;
   provider: LLMModelProvider;
+  support_image_understanding?: boolean;
 }
 
 export interface LLMModelProvider {
