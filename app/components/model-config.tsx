@@ -13,7 +13,6 @@ import UploadIcon from "../icons/upload.svg";
 import { LLMModel } from "../client/api";
 import { DEFAULT_MODELS } from "@/app/constant";
 import { ModelDropdown } from "./model-dropdown";
-import dropdownStyles from "./model-dropdown.module.scss";
 
 // 每个模型的特定配置定义
 const MODEL_SPECIFIC_CONFIGS = {
@@ -183,66 +182,31 @@ export function ModelConfigList(props: {
 
   return (
     <>
-      <ListItem title="Model Configuration">
-        <div className={dropdownStyles["model-config-container"]}>
-          {/* Enhanced Model Dropdown */}
-          <ModelDropdown
-            models={appConfig.models}
-            selectedModel={currentConfigModel}
-            defaultModel={defaultModel}
-            onModelSelect={(modelName) => {
-              console.log("[Model Config Debug] Switching config view to:", modelName);
-              modelConfigsStore.setCurrentConfigModel(modelName);
-              // Update the model-specific config display
-              setModelSpecificConfig(getModelConfig(modelName));
-            }}
-            onDefaultToggle={(modelName) => {
-              console.log("[Model Config Debug] onDefaultToggle called for model:", modelName);
-              console.log("[Model Config Debug] Current default model:", defaultModel);
-              modelConfigsStore.setDefaultModel(modelName);
-              console.log("[Model Config Debug] New default model set:", modelName);
-
-              // Update the global model config to match the new default
-              props.updateConfig((config) => {
-                config.model = ModalConfigValidator.model(modelName);
-
-                // Auto-update support_streaming based on model definition
-                const selectedModel = appConfig.models.find(m => m.name === modelName);
-                if (selectedModel && (selectedModel as any).support_streaming !== undefined) {
-                  config.support_streaming = (selectedModel as any).support_streaming;
-                }
-              });
-            }}
-          />
-
-          {/* Model-Specific Configuration Panel */}
-          <div className={dropdownStyles["model-specific-config"]}>
-            <h4>Configure: {appConfig.models.find(m => m.name === currentConfigModel)?.displayName || currentConfigModel}</h4>
-
-            {/* Region Configuration */}
-            <div className={dropdownStyles["config-item"]}>
-              <label>Region Override</label>
-              <input
-                type="text"
-                placeholder="Leave empty to use system region"
-                value={modelConfigsStore.getModelConfig(currentConfigModel).region || ""}
-                onChange={(e) => {
-                  const newRegion = e.currentTarget.value;
-                  console.log("[Model Config Debug] Updating region for", currentConfigModel, "to:", newRegion);
-                  modelConfigsStore.updateModelConfig(currentConfigModel, {
-                    region: newRegion,
-                  });
-                }}
-              />
-              <small>
-                System region: {accessStore.awsRegion || "not set"} |
-                Effective: {modelConfigsStore.getEffectiveRegion(currentConfigModel, accessStore.awsRegion)}
-              </small>
-            </div>
+      {/* Model Configuration Section - Full Width */}
+      <div style={{
+        border: "var(--border-in-light)",
+        borderRadius: "10px",
+        boxShadow: "var(--card-shadow)",
+        marginBottom: "20px",
+        background: "var(--white)",
+        padding: "20px"
+      }}>
+        {/* Header Row: Title + Management Buttons */}
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "16px"
+        }}>
+          <div style={{
+            fontSize: "14px",
+            fontWeight: "bolder",
+            color: "var(--black)"
+          }}>
+            Model Configuration
           </div>
 
-          {/* Model Management Buttons */}
-          <div className="model-management-buttons" style={{ marginTop: "16px", display: "flex", gap: "8px" }}>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             <IconButton
               onClick={async () => {
                 try {
@@ -274,6 +238,7 @@ export function ModelConfigList(props: {
                 }
               }}
               icon={<ResetIcon />}
+              title="Refresh models from remote"
             />
 
             <input
@@ -293,7 +258,66 @@ export function ModelConfigList(props: {
             />
           </div>
         </div>
+
+        {/* Model Dropdown Row */}
+        <ModelDropdown
+          models={appConfig.models}
+          selectedModel={currentConfigModel}
+          defaultModel={defaultModel}
+          onModelSelect={(modelName) => {
+            console.log("[Model Config Debug] Switching config view to:", modelName);
+            modelConfigsStore.setCurrentConfigModel(modelName);
+            // Update the model-specific config display
+            setModelSpecificConfig(getModelConfig(modelName));
+          }}
+          onDefaultToggle={(modelName) => {
+            console.log("[Model Config Debug] onDefaultToggle called for model:", modelName);
+            console.log("[Model Config Debug] Current default model:", defaultModel);
+            modelConfigsStore.setDefaultModel(modelName);
+            console.log("[Model Config Debug] New default model set:", modelName);
+
+            // Update the global model config to match the new default
+            props.updateConfig((config) => {
+              config.model = ModalConfigValidator.model(modelName);
+
+              // Auto-update support_streaming based on model definition
+              const selectedModel = appConfig.models.find(m => m.name === modelName);
+              if (selectedModel && (selectedModel as any).support_streaming !== undefined) {
+                config.support_streaming = (selectedModel as any).support_streaming;
+              }
+            });
+          }}
+        />
+      </div>
+
+      <ListItem
+        title={`${Locale.Settings.Access.AWS.Region.Title} (${appConfig.models.find(m => m.name === currentConfigModel)?.displayName || currentConfigModel})`}
+        subTitle="Configure AWS region for this model. Leave empty to use system region."
+      >
+        <input
+          type="text"
+          placeholder="Leave empty to use system region"
+          value={modelConfigsStore.getModelConfig(currentConfigModel).region || ""}
+          onChange={(e) => {
+            const newRegion = e.currentTarget.value;
+            console.log("[Model Config Debug] Updating region for", currentConfigModel, "to:", newRegion);
+            modelConfigsStore.updateModelConfig(currentConfigModel, {
+              region: newRegion,
+            });
+          }}
+          style={{
+            width: "100%",
+            padding: "10px",
+            border: "var(--border-in-light)",
+            borderRadius: "10px",
+            backgroundColor: "var(--white)",
+            color: "var(--black)",
+            fontFamily: "inherit",
+            fontSize: "14px",
+          }}
+        />
       </ListItem>
+
       <ListItem
         title={Locale.Settings.Temperature.Title}
         subTitle={Locale.Settings.Temperature.SubTitle}

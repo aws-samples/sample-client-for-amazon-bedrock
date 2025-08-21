@@ -89,15 +89,12 @@ export function ModelDropdown({
                   readOnly
                 />
               </div>
-              <div 
+              <div
                 className={styles["model-info"]}
                 onClick={() => handleModelNameClick(model.name)}
               >
                 <span className={styles["model-name"]}>
-                  {model.displayName || model.name}
-                </span>
-                <span className={styles["model-provider"]}>
-                  ({model.provider?.providerName})
+                  {model.displayName || model.name} ({model.provider?.providerName})
                 </span>
               </div>
             </div>
