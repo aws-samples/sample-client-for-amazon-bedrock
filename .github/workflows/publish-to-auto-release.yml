@@ -52,6 +52,45 @@ jobs:
       - name: install frontend dependencies
         run: yarn install # change this to npm, pnpm or bun depending on which one you use.
 
+      - name: Debug Certificate Configuration (macOS only)
+        if: matrix.platform == 'macos-latest'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          echo "🔍 调试证书配置..."
+          echo "APPLE_CERTIFICATE 长度: ${#APPLE_CERTIFICATE}"
+          echo "APPLE_CERTIFICATE_PASSWORD 长度: ${#APPLE_CERTIFICATE_PASSWORD}"
+          echo "APPLE_SIGNING_IDENTITY: '$APPLE_SIGNING_IDENTITY'"
+          
+          # 检查证书是否为有效的 base64
+          if echo "$APPLE_CERTIFICATE" | base64 -d > /tmp/test_cert.p12 2>/dev/null; then
+            echo "✓ 证书 base64 解码成功"
+            ls -la /tmp/test_cert.p12
+            
+            # 测试不同的密码
+            echo "测试空密码..."
+            if openssl pkcs12 -info -in /tmp/test_cert.p12 -passin pass: -noout -legacy 2>/dev/null; then
+              echo "✓ 空密码验证成功"
+              CERT_PASSWORD=""
+            else
+              echo "✗ 空密码验证失败"
+              echo "测试设置的密码..."
+              if openssl pkcs12 -info -in /tmp/test_cert.p12 -passin pass:$APPLE_CERTIFICATE_PASSWORD -noout -legacy 2>/dev/null; then
+                echo "✓ 设置的密码验证成功"
+                CERT_PASSWORD="$APPLE_CERTIFICATE_PASSWORD"
+              else
+                echo "✗ 设置的密码验证失败"
+              fi
+            fi
+            
+            echo "最终使用密码: '$CERT_PASSWORD'"
+          else
+            echo "✗ 证书 base64 解码失败"
+            exit 1
+          fi
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
