@@ -26,18 +26,34 @@ export const DEFAULT_MASK_STATE = {
 export type MaskState = typeof DEFAULT_MASK_STATE;
 
 export const DEFAULT_MASK_AVATAR = "gpt-bot";
-export const createEmptyMask = () =>
-  ({
+export const createEmptyMask = () => {
+  const globalConfig = useAppConfig.getState().modelConfig;
+  console.log("[Create Empty Mask Debug] Global config from useAppConfig:", {
+    model: globalConfig.model,
+    support_streaming: globalConfig.support_streaming,
+    temperature: globalConfig.temperature
+  });
+
+  const mask = {
     id: nanoid(),
     avatar: DEFAULT_MASK_AVATAR,
     name: DEFAULT_TOPIC,
     context: [],
     syncGlobalConfig: true, // use global config as default
-    modelConfig: { ...useAppConfig.getState().modelConfig },
+    modelConfig: { ...globalConfig },
     lang: getLang(),
     builtin: false,
     createdAt: Date.now(),
-  }) as Mask;
+  } as Mask;
+
+  console.log("[Create Empty Mask Debug] Created mask with modelConfig:", {
+    model: mask.modelConfig.model,
+    support_streaming: mask.modelConfig.support_streaming,
+    temperature: mask.modelConfig.temperature
+  });
+
+  return mask;
+};
 
 export const useMaskStore = createPersistStore(
   { ...DEFAULT_MASK_STATE },

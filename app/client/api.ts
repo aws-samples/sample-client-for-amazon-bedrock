@@ -41,6 +41,7 @@ export interface LLMConfig {
   temperature?: number;
   top_p?: number;
   stream?: boolean;
+  support_streaming?: boolean;
   presence_penalty?: number;
   frequency_penalty?: number;
 }
@@ -68,6 +69,8 @@ export interface LLMModel {
   anthropic_version?: string;
   displayName: string;
   provider: LLMModelProvider;
+  support_image_understanding?: boolean;
+  region?: string;
 }
 
 export interface LLMModelProvider {

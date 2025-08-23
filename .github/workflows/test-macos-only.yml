@@ -1,0 +1,116 @@
+name: "test-macos-only"
+
+on: 
+  workflow_dispatch: # Manual trigger
+  pull_request:
+    paths:
+      - 'src-tauri/**'
+      - '.github/workflows/test-macos-only.yml'
+
+# This workflow will only build the macOS app for testing purposes
+
+jobs:
+  test-macos:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-latest" # for Arm based macs (M1 and above).
+            args: "--target aarch64-apple-darwin"
+          - platform: "macos-latest" # for Intel based macs.
+            args: "--target x86_64-apple-darwin"
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Install frontend dependencies
+        run: yarn install
+
+      - name: Check Tauri configuration
+        run: |
+          echo "🔍 检查 Tauri 配置..."
+          echo "Bundle ID: $(cat src-tauri/tauri.conf.json | grep identifier | cut -d'"' -f4)"
+          echo "App Name: $(cat src-tauri/tauri.conf.json | grep productName | cut -d'"' -f4)"
+          echo "Version: $(cat src-tauri/tauri.conf.json | grep version | head -1 | cut -d'"' -f4)"
+
+      - name: Check Apple Developer configuration
+        run: |
+          echo "🍎 检查 Apple 开发者配置..."
+          echo "Apple ID: ${{ secrets.APPLE_ID != '' && '已设置' || '未设置' }}"
+          echo "Apple Certificate: ${{ secrets.APPLE_CERTIFICATE != '' && '已设置' || '未设置' }}"
+          echo "Apple Team ID: ${{ secrets.APPLE_TEAM_ID != '' && '已设置' || '未设置' }}"
+          echo "Tauri Private Key: ${{ secrets.TAURI_PRIVATE_KEY != '' && '已设置' || '未设置' }}"
+
+      - name: Build macOS app (Debug)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 暂时跳过代码签名进行测试
+          # ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
+          # APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          # APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # APPLE_ID: ${{ secrets.APPLE_ID }}
+          # APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        with:
+          # 不创建 release，只构建
+          tagName: ""
+          releaseName: ""
+          releaseBody: ""
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }} --debug
+
+      - name: List build output
+        run: |
+          echo "🔍 检查构建输出..."
+          find src-tauri/target -name "*.app" -o -name "*.dmg" -o -name "*.pkg" | head -10
+          ls -la src-tauri/target/*/bundle/ || echo "No bundle directory found"
+
+      - name: Upload macOS app (if exists)
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-app-${{ matrix.args == '--target aarch64-apple-darwin' && 'arm64' || 'x64' }}
+          path: |
+            src-tauri/target/*/bundle/macos/*.app
+            src-tauri/target/*/bundle/dmg/*.dmg
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Build Summary
+        run: |
+          echo "🎉 macOS Build Test Completed!"
+          echo "=============================="
+          echo ""
+          echo "✅ Completed Steps:"
+          echo "  • Node.js and Rust environment setup"
+          echo "  • Frontend dependencies installed"
+          echo "  • Tauri configuration validated"
+          echo "  • macOS app build attempted"
+          echo ""
+          echo "🏗️ Build Target: ${{ matrix.args }}"
+          echo "📋 Notes:"
+          echo "  • Code signing skipped for testing"
+          echo "  • Debug build created"
+          echo "  • Build artifacts uploaded if successful"
+          echo ""
+          echo "🚀 Next Steps:"
+          echo "  • For signed builds, enable Apple certificates"
+          echo "  • For distribution, create release builds"
+          echo "  • Consider notarization for public distribution"

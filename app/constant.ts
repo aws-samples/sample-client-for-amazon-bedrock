@@ -45,6 +45,7 @@ export enum StoreKey {
   Prompt = "prompt-store",
   Update = "chat-update",
   Sync = "sync",
+  ModelConfigs = "model-configs",
 }
 
 export const DEFAULT_SIDEBAR_WIDTH = 300;
@@ -138,6 +139,7 @@ export const DEFAULT_MODELS = [
     modelId: "anthropic.claude-3-sonnet-20240229-v1:0",
     anthropic_version: "bedrock-2023-05-31",
     displayName: "Claude3 sonnet",
+    support_image_understanding: true,
     provider: {
       id: "aws",
       providerName: "AWS",
@@ -150,6 +152,7 @@ export const DEFAULT_MODELS = [
     modelId: "anthropic.claude-3-haiku-20240307-v1:0",
     anthropic_version: "bedrock-2023-05-31",
     displayName: "Claude3 haiku",
+    support_image_understanding: true,
     provider: {
       id: "aws",
       providerName: "AWS",
@@ -162,6 +165,7 @@ export const DEFAULT_MODELS = [
     modelId: "anthropic.claude-3-7-sonnet-20250219-v1:0",
     anthropic_version: "bedrock-2023-05-31",
     displayName: "Claude3.7 sonnet",
+    support_image_understanding: true,
     provider: {
       id: "aws",
       providerName: "AWS",

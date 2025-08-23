@@ -7,7 +7,7 @@ import {
   REQUEST_TIMEOUT_MS,
   // ServiceProvider,
 } from "@/app/constant";
-import { useAccessStore, useAppConfig, useChatStore } from "@/app/store";
+import { useAccessStore, useAppConfig, useChatStore, useModelConfigsStore } from "@/app/store";
 import { ConverseCommandInput } from "@aws-sdk/client-bedrock-runtime";
 import { BedrockClient, AWSConfig } from "@/app/client/platforms/aws_utils";
 import Locale from "../../locales";
@@ -308,6 +308,12 @@ export class ClaudeApi implements LLMApi {
 
     const models = useAppConfig.getState().models;
     const accessStore = useAccessStore.getState();
+    const modelConfigsStore = useModelConfigsStore.getState();
+
+    // Get the effective region for this specific model
+    const effectiveRegion = modelConfigsStore.getEffectiveRegion(options.config.model, accessStore.awsRegion);
+    console.log("[AWS Region Debug] Model:", options.config.model, "System region:", accessStore.awsRegion, "Effective region:", effectiveRegion);
+
     let credential;
 
     // if aksk expiration then login again
@@ -375,7 +381,7 @@ export class ClaudeApi implements LLMApi {
     const BEDROCK_ENDPOINT = accessStore.bedrockEndpoint || process.env.NEXT_PUBLIC_BEDROCK_ENDPOINT;
 
     const aws_config_data = {
-      region: accessStore.awsRegion,
+      region: effectiveRegion, // Use model-specific region instead of system region
       credentials: {
         accessKeyId: credential
           ? credential.awsAccessKeyId

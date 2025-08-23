@@ -15,6 +15,7 @@ import { createJSONStorage, StateStorage } from 'zustand/middleware'
 import Locale, { getLang } from "../locales";
 import { showToast } from "../components/ui-lib";
 import { ModelConfig, ModelType, useAppConfig } from "./config";
+import { useModelConfigsStore } from "./model-configs";
 import { createEmptyMask, Mask } from "./mask";
 import {
   DEFAULT_INPUT_TEMPLATE,
@@ -158,7 +159,7 @@ const DEFAULT_CHAT_STATE = {
   lastAction: '',
   currentSessionIndex: 0,
 };
-const CURRENT_STORAGE_VERSION = 4.0
+const CURRENT_STORAGE_VERSION = 4.2
 
 import { indexedDB as fakeIndexedDB } from "fake-indexeddb";
 
@@ -351,11 +352,28 @@ export const useChatStore = createPersistStore(
       },
 
       newSession(mask?: Mask) {
+        console.log("[New Session Debug] Creating new session...");
         const session = createEmptySession();
+        const modelConfigsStore = useModelConfigsStore.getState();
+
+        console.log("[New Session Debug] Empty session created with mask:", {
+          id: session.mask.id,
+          modelConfig: session.mask.modelConfig,
+          support_streaming: session.mask.modelConfig.support_streaming
+        });
 
         if (mask) {
+          console.log("[New Session Debug] Using provided mask:", mask.name);
           const config = useAppConfig.getState();
           const globalModelConfig = config.modelConfig;
+          console.log("[New Session Debug] Global model config:", {
+            model: globalModelConfig.model,
+            support_streaming: globalModelConfig.support_streaming
+          });
+          console.log("[New Session Debug] Mask model config:", {
+            model: mask.modelConfig?.model,
+            support_streaming: mask.modelConfig?.support_streaming
+          });
 
           session.mask = {
             ...mask,
@@ -365,6 +383,32 @@ export const useChatStore = createPersistStore(
             },
           };
           session.topic = mask.name;
+
+          console.log("[New Session Debug] Final session mask config:", {
+            model: session.mask.modelConfig.model,
+            support_streaming: session.mask.modelConfig.support_streaming
+          });
+        } else {
+          console.log("[New Session Debug] No mask provided, using default session with default model");
+
+          // Use the default model from model configs store
+          const defaultModel = modelConfigsStore.defaultModel;
+          const appConfig = useAppConfig.getState();
+          const selectedModel = appConfig.models.find(m => m.name === defaultModel);
+
+          console.log("[New Session Debug] Setting default model:", defaultModel);
+          session.mask.modelConfig.model = defaultModel as ModelType;
+
+          // Auto-update support_streaming based on model definition
+          if (selectedModel && (selectedModel as any).support_streaming !== undefined) {
+            session.mask.modelConfig.support_streaming = (selectedModel as any).support_streaming;
+            console.log("[New Session Debug] Auto-updating support_streaming for default model:", (selectedModel as any).support_streaming);
+          }
+
+          console.log("[New Session Debug] Final session mask config:", {
+            model: session.mask.modelConfig.model,
+            support_streaming: session.mask.modelConfig.support_streaming
+          });
         }
 
         set((state) => ({
@@ -372,6 +416,8 @@ export const useChatStore = createPersistStore(
           currentSessionIndex: 0,
           sessions: [session].concat(state.sessions),
         }));
+
+        console.log("[New Session Debug] New session created and set as current");
       },
 
       importSession(session: any) {
@@ -483,6 +529,14 @@ export const useChatStore = createPersistStore(
         const session = get().currentSession();
         const modelConfig = session.mask.modelConfig;
 
+        console.log("[Chat Debug] onUserInput called");
+        console.log("[Chat Debug] Current session ID:", session.id);
+        console.log("[Chat Debug] Model config:", {
+          model: modelConfig.model,
+          support_streaming: modelConfig.support_streaming,
+          temperature: modelConfig.temperature
+        });
+
         const userContent = fillTemplateWith(content, modelConfig);
         console.log("[User Input] after template: ", userContent);
 
@@ -555,7 +609,7 @@ export const useChatStore = createPersistStore(
 
         const botMessage: ChatMessage = createMessage({
           role: "assistant",
-          streaming: true,
+          streaming: modelConfig.support_streaming ?? true,
           model: modelConfig.model,
         });
 
@@ -590,18 +644,27 @@ export const useChatStore = createPersistStore(
         // }
 
         // make request
+        const streamingEnabled = modelConfig.support_streaming ?? true;
+        console.log("[Chat Debug] Streaming decision:", {
+          support_streaming: modelConfig.support_streaming,
+          streamingEnabled: streamingEnabled,
+          finalConfig: { ...modelConfig, stream: streamingEnabled }
+        });
+
         api.llm.chat({
           messages: sendMessages,
-          config: { ...modelConfig, stream: true },
+          config: { ...modelConfig, stream: streamingEnabled },
           onUpdate(message) {
-            botMessage.streaming = true;
-            if (message) {
-              botMessage.content = message;
+            if (modelConfig.support_streaming) {
+              botMessage.streaming = true;
+              if (message) {
+                botMessage.content = message;
+              }
+              // Need to update state to update UI
+              get().updateCurrentSessionStream((session) => {
+                session.messages = session.messages.concat();
+              });
             }
-            // Need to update state to update UI
-            get().updateCurrentSessionStream((session) => {
-              session.messages = session.messages.concat();
-            });
           },
           onFinish(message, metrics) {
             // console.log("[Chat response finished]: ", message);
@@ -613,10 +676,13 @@ export const useChatStore = createPersistStore(
             if (metrics) {
               botMessage.metrics = metrics;
             }
+            // For non-streaming mode, we need to ensure UI is updated
             // 已经在 get().onNewMessage() 中更新了 CurrentSession
-            // get().updateCurrentSession((session) => {
-            //   session.messages = session.messages.concat();
-            // });
+            if (!modelConfig.support_streaming) {
+              get().updateCurrentSession((session) => {
+                session.messages = session.messages.concat();
+              });
+            }
             ChatControllerPool.remove(session.id, botMessage.id);
           },
           onError(error) {
@@ -859,7 +925,7 @@ export const useChatStore = createPersistStore(
             ),
             config: {
               ...modelConfig,
-              stream: true,
+              stream: modelConfig.support_streaming ?? true,
               model: getSummarizeModel(session.mask.modelConfig.model),
             },
             onUpdate(message) {
@@ -956,6 +1022,26 @@ export const useChatStore = createPersistStore(
             const config = useAppConfig.getState();
             s.mask.modelConfig.enableInjectSystemPrompts =
               config.modelConfig.enableInjectSystemPrompts;
+          }
+        });
+      }
+
+      // Add support_streaming field for old sessions
+      if (version < 4.1) {
+        newState.sessions.forEach((s) => {
+          if (!s.mask.modelConfig.hasOwnProperty("support_streaming")) {
+            // Default to true for backward compatibility
+            s.mask.modelConfig.support_streaming = true;
+          }
+        });
+      }
+
+      // Change default support_streaming from false to true
+      if (version < 4.2) {
+        newState.sessions.forEach((s) => {
+          if (s.mask.modelConfig.support_streaming === false) {
+            // Update existing false values to true for better user experience
+            s.mask.modelConfig.support_streaming = true;
           }
         });
       }
