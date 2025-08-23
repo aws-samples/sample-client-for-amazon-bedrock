@@ -74,7 +74,8 @@
         "exceptionDomain": "",
         "frameworks": [],
         "providerShortName": null,
-        "signingIdentity": null
+        "signingIdentity": null,
+        "notarize": false
       },
       "resources": [],
       "shortDescription": "Sample Client for Amazon Bedrock",
@@ -92,7 +93,7 @@
     "updater": {
       "active": true,
       "endpoints": [
-         "https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.1/latest.json"
+        "https://github.com/aws-samples/sample-client-for-amazon-bedrock/releases/download/app-v1.2.1/latest.json"
       ],
       "dialog": true,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERGMUIzMTE1NTU5NjhCNDYKUldSR2k1WlZGVEViMzArcmhKMkFpaDJOd21mcVVzeUMrOHZGcFdaSy9GRFRMUlNOcTQwRWg0a24K"
