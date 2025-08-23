@@ -45,10 +45,13 @@ jobs:
           
           # 检查 App-Specific Password 格式
           echo "Apple Password 长度: ${#APPLE_PASSWORD}"
-          if [[ ${#APPLE_PASSWORD} -eq 16 ]]; then
-            echo "✅ Apple Password 长度正确"
+          if [[ ${#APPLE_PASSWORD} -eq 19 && "$APPLE_PASSWORD" =~ ^[a-z]{4}-[a-z]{4}-[a-z]{4}-[a-z]{4}$ ]]; then
+            echo "✅ Apple Password 格式正确 (App-Specific Password)"
+          elif [[ ${#APPLE_PASSWORD} -eq 19 ]]; then
+            echo "⚠️  Apple Password 长度正确但格式可能不对"
+            echo "   App-Specific Password 格式应该为: xxxx-xxxx-xxxx-xxxx"
           else
-            echo "❌ Apple Password 长度不正确 (应该是 16)"
+            echo "❌ Apple Password 长度不正确 (应该是 19，包括横杠)"
           fi
 
       - name: Test Apple Notarization Service Connection
