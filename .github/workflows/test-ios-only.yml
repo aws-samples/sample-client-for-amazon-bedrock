@@ -97,7 +97,7 @@ jobs:
       - name: Build iOS (Debug)
         run: |
           cd flutter_app
-          flutter build ios --debug --no-codesign
+          flutter build ios --debug --no-codesign --simulator
 
       - name: List build directories
         run: |
