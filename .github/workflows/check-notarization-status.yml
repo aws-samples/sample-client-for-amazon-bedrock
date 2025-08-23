@@ -1,0 +1,37 @@
+name: "check-notarization-status"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-status:
+    runs-on: macos-latest
+    steps:
+      - name: Check Notarization Status
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          echo "🔍 检查公证状态..."
+          
+          # 存储凭据
+          xcrun notarytool store-credentials "status-check" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID"
+          
+          # 获取最近的提交历史
+          echo "获取公证历史..."
+          xcrun notarytool history --keychain-profile "status-check" --output-format json > history.json
+          
+          # 解析并检查每个 In Progress 的状态
+          echo "检查 In Progress 状态的提交..."
+          cat history.json | jq -r '.history[] | select(.status == "In Progress") | .id' | while read id; do
+            echo "检查提交 ID: $id"
+            xcrun notarytool info "$id" --keychain-profile "status-check"
+            echo "---"
+          done
+          
+          # 清理凭据
+          xcrun notarytool delete-credentials "status-check" || true
