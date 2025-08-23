@@ -1,0 +1,113 @@
+name: "validate-api-key"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: macos-latest
+    steps:
+      - name: Validate App Store Connect API Key Configuration
+        env:
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          echo "🔍 验证 Apple 公证配置..."
+          echo "=================================="
+          
+          # 检查 API 密钥配置
+          if [ -n "$APPLE_API_KEY" ] && [ -n "$APPLE_API_KEY_ID" ] && [ -n "$APPLE_API_ISSUER" ]; then
+            echo "✅ App Store Connect API 密钥已配置"
+            echo "   Key ID: $APPLE_API_KEY_ID"
+            echo "   Issuer: $APPLE_API_ISSUER"
+            echo "   API Key length: ${#APPLE_API_KEY} characters"
+            
+            # 验证 API 密钥格式
+            if echo "$APPLE_API_KEY" | grep -q "BEGIN PRIVATE KEY"; then
+              echo "✅ API 密钥格式正确 (包含 PEM 头部)"
+            else
+              echo "❌ API 密钥格式错误 (缺少 PEM 头部)"
+            fi
+            
+            # 验证 Key ID 格式 (应该是10个字符)
+            if [ ${#APPLE_API_KEY_ID} -eq 10 ]; then
+              echo "✅ Key ID 长度正确 (10个字符)"
+            else
+              echo "❌ Key ID 长度错误 (应该是10个字符，当前: ${#APPLE_API_KEY_ID})"
+            fi
+            
+            # 验证 Issuer ID 格式 (应该是 UUID)
+            if echo "$APPLE_API_ISSUER" | grep -E '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' > /dev/null; then
+              echo "✅ Issuer ID 格式正确 (UUID 格式)"
+            else
+              echo "❌ Issuer ID 格式错误 (应该是 UUID 格式)"
+            fi
+            
+            # 尝试测试 API 密钥
+            echo ""
+            echo "🧪 测试 API 密钥连接..."
+            
+            # 创建临时密钥文件
+            echo "$APPLE_API_KEY" > /tmp/api_key.p8
+            
+            # 测试 notarytool 连接
+            if xcrun notarytool history --key /tmp/api_key.p8 --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER" --output-format json > /tmp/history.json 2>/dev/null; then
+              echo "✅ API 密钥连接成功"
+              
+              # 检查队列状态
+              IN_PROGRESS=$(cat /tmp/history.json | jq '.history[] | select(.status == "In Progress")' | jq -s length)
+              echo "📊 当前队列中进行中的提交: $IN_PROGRESS"
+              
+              if [ "$IN_PROGRESS" -lt 5 ]; then
+                echo "✅ 队列状态良好，适合提交公证"
+              else
+                echo "⚠️ 队列积压较多，建议稍后再试"
+              fi
+            else
+              echo "❌ API 密钥连接失败"
+              echo "请检查密钥配置是否正确"
+            fi
+            
+            # 清理临时文件
+            rm -f /tmp/api_key.p8 /tmp/history.json
+            
+            API_KEY_CONFIGURED=true
+          else
+            echo "❌ App Store Connect API 密钥未配置"
+            API_KEY_CONFIGURED=false
+          fi
+          
+          echo ""
+          
+          # 检查 Apple ID 配置
+          if [ -n "$APPLE_ID" ] && [ -n "$APPLE_PASSWORD" ] && [ -n "$APPLE_TEAM_ID" ]; then
+            echo "✅ Apple ID 方式已配置 (备用方案)"
+            echo "   Apple ID: $APPLE_ID"
+            echo "   Team ID: $APPLE_TEAM_ID"
+            APPLE_ID_CONFIGURED=true
+          else
+            echo "❌ Apple ID 方式未配置"
+            APPLE_ID_CONFIGURED=false
+          fi
+          
+          echo ""
+          echo "📋 配置总结:"
+          
+          if [ "$API_KEY_CONFIGURED" = true ]; then
+            echo "🎯 推荐使用: App Store Connect API 密钥 (已配置)"
+            echo "   优势: 更稳定、更安全、Apple 推荐"
+          elif [ "$APPLE_ID_CONFIGURED" = true ]; then
+            echo "🔄 当前使用: Apple ID 方式 (已配置)"
+            echo "   建议: 升级到 API 密钥方式"
+          else
+            echo "❌ 错误: 没有配置任何公证方式"
+            echo "   请配置 API 密钥或 Apple ID 方式"
+            exit 1
+          fi
+          
+          echo ""
+          echo "🚀 准备就绪，可以进行公证构建！"
