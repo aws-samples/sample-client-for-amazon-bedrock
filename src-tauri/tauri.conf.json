@@ -75,7 +75,7 @@
         "frameworks": [],
         "providerShortName": null,
         "signingIdentity": null,
-        "notarize": false
+        "notarize": true
       },
       "resources": [],
       "shortDescription": "Sample Client for Amazon Bedrock",
