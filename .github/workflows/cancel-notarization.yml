@@ -1,0 +1,92 @@
+name: "cancel-notarization"
+
+on:
+  workflow_dispatch:
+    inputs:
+      cancel_all_in_progress:
+        description: 'Cancel all In Progress submissions'
+        required: false
+        default: 'true'
+        type: boolean
+      specific_submission_id:
+        description: 'Specific submission ID to cancel (optional)'
+        required: false
+        type: string
+
+jobs:
+  cancel:
+    runs-on: macos-latest
+    steps:
+      - name: Cancel Notarization Submissions
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CANCEL_ALL: ${{ github.event.inputs.cancel_all_in_progress }}
+          SPECIFIC_ID: ${{ github.event.inputs.specific_submission_id }}
+        run: |
+          echo "🚫 开始撤销公证提交 - $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "=================================="
+          
+          # 存储凭据
+          xcrun notarytool store-credentials "cancel" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID"
+          
+          echo "📋 获取当前公证历史..."
+          xcrun notarytool history --keychain-profile "cancel" --output-format json > history.json
+          
+          # 显示当前状态
+          echo "当前公证提交状态:"
+          cat history.json | jq -r '.history[0:10][] | "🔸 ID: \(.id) | 状态: \(.status) | 创建时间: \(.createdDate) | 名称: \(.name)"'
+          
+          if [ "$CANCEL_ALL" = "true" ]; then
+            echo ""
+            echo "🚫 撤销所有 'In Progress' 状态的提交..."
+            
+            # 获取所有 In Progress 的提交ID
+            IN_PROGRESS_IDS=$(cat history.json | jq -r '.history[] | select(.status == "In Progress") | .id')
+            
+            if [ -z "$IN_PROGRESS_IDS" ]; then
+              echo "✅ 没有找到需要撤销的提交"
+            else
+              echo "找到以下需要撤销的提交:"
+              echo "$IN_PROGRESS_IDS"
+              echo ""
+              
+              # 逐个撤销
+              echo "$IN_PROGRESS_IDS" | while read id; do
+                if [ -n "$id" ]; then
+                  echo "🚫 撤销提交: $id"
+                  if xcrun notarytool cancel "$id" --keychain-profile "cancel"; then
+                    echo "✅ 成功撤销: $id"
+                  else
+                    echo "❌ 撤销失败: $id"
+                  fi
+                  echo "---"
+                fi
+              done
+            fi
+          fi
+          
+          if [ -n "$SPECIFIC_ID" ]; then
+            echo ""
+            echo "🎯 撤销指定的提交: $SPECIFIC_ID"
+            if xcrun notarytool cancel "$SPECIFIC_ID" --keychain-profile "cancel"; then
+              echo "✅ 成功撤销指定提交: $SPECIFIC_ID"
+            else
+              echo "❌ 撤销指定提交失败: $SPECIFIC_ID"
+            fi
+          fi
+          
+          echo ""
+          echo "📊 撤销后的状态:"
+          xcrun notarytool history --keychain-profile "cancel" --output-format json | jq -r '.history[0:5][] | "🔸 ID: \(.id) | 状态: \(.status) | 创建时间: \(.createdDate)"'
+          
+          # 清理凭据
+          xcrun notarytool delete-credentials "cancel" || true
+          
+          echo ""
+          echo "🕐 撤销完成时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "💡 建议等待 30-60 分钟后再重新提交构建，让 Apple 服务器恢复正常"
