@@ -1,0 +1,24 @@
+name: Check iOS Versions
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-versions:
+    runs-on: macos-latest
+    steps:
+      - name: Check Xcode version
+        run: xcodebuild -version
+        
+      - name: List available iOS simulators
+        run: xcrun simctl list devices available
+        
+      - name: List available iOS SDKs
+        run: xcodebuild -showsdks | grep ios
+        
+      - name: Check Flutter doctor
+        run: |
+          # Install Flutter first
+          git clone https://github.com/flutter/flutter.git -b stable --depth 1
+          export PATH="$PATH:`pwd`/flutter/bin"
+          flutter doctor -v
