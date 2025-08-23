@@ -91,6 +91,27 @@ jobs:
             exit 1
           fi
 
+      - name: Enable Detailed Notarization Logging (macOS only)
+        if: matrix.platform == 'macos-latest'
+        run: |
+          echo "🔍 启用详细的公证日志..."
+          # 启用详细的 Tauri 构建日志
+          echo "TAURI_BUNDLE_DEBUG=true" >> $GITHUB_ENV
+          echo "RUST_LOG=debug" >> $GITHUB_ENV
+          # 启用详细的公证日志
+          echo "NOTARYTOOL_VERBOSE=true" >> $GITHUB_ENV
+          # 显示当前时间作为基准
+          echo "🕐 开始构建时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          
+          # 创建一个后台进程来定期输出时间戳
+          (
+            while true; do
+              sleep 300  # 每5分钟输出一次
+              echo "⏰ 构建进行中... $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            done
+          ) &
+          echo $! > /tmp/timestamp_monitor.pid
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -103,6 +124,9 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          # 启用详细日志
+          TAURI_BUNDLE_DEBUG: true
+          RUST_LOG: debug
         with:
           tagName: app-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
           releaseName: "App v__VERSION__"
@@ -110,6 +134,35 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+      - name: Check Notarization Status (macOS only)
+        if: matrix.platform == 'macos-latest'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # 停止时间戳监控进程
+          if [ -f /tmp/timestamp_monitor.pid ]; then
+            kill $(cat /tmp/timestamp_monitor.pid) 2>/dev/null || true
+            rm -f /tmp/timestamp_monitor.pid
+          fi
+          
+          echo "🕐 构建完成时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "🔍 检查最近的公证状态..."
+          
+          # 存储凭据
+          xcrun notarytool store-credentials "build-check" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" || true
+          
+          # 获取最近的公证历史
+          echo "📋 最近的公证提交:"
+          xcrun notarytool history --keychain-profile "build-check" --output-format json | jq -r '.history[0:3][] | "ID: \(.id) | Status: \(.status) | Created: \(.createdDate) | Name: \(.name)"' || echo "无法获取公证历史"
+          
+          # 清理凭据
+          xcrun notarytool delete-credentials "build-check" || true
 
   publish-android:
     permissions:
