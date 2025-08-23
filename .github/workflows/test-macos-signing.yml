@@ -1,0 +1,131 @@
+name: "test-macos-signing"
+
+on: 
+  workflow_dispatch: # Manual trigger only
+
+# Test macOS code signing specifically
+
+jobs:
+  test-macos-signing:
+    permissions:
+      contents: write
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Install frontend dependencies
+        run: yarn install
+
+      - name: Debug Apple Certificates
+        run: |
+          echo "🔍 调试 Apple 证书配置..."
+          echo "APPLE_CERTIFICATE 长度: ${#APPLE_CERTIFICATE}"
+          echo "APPLE_CERTIFICATE_PASSWORD: '$APPLE_CERTIFICATE_PASSWORD'"
+          echo "APPLE_SIGNING_IDENTITY: '$APPLE_SIGNING_IDENTITY'"
+          echo "APPLE_TEAM_ID: '$APPLE_TEAM_ID'"
+          echo "APPLE_ID: '$APPLE_ID'"
+          echo ""
+          
+          # 检查证书是否为有效的 base64
+          if echo "$APPLE_CERTIFICATE" | base64 -d > /tmp/test_cert.p12 2>/dev/null; then
+            echo "✓ 证书 base64 解码成功"
+            ls -la /tmp/test_cert.p12
+          else
+            echo "✗ 证书 base64 解码失败"
+          fi
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+
+      - name: Test Certificate Import Manually
+        run: |
+          echo "🔧 手动测试证书导入..."
+          
+          # 创建临时密钥链
+          KEYCHAIN_PASSWORD="temp123456"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" test.keychain
+          security default-keychain -s test.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" test.keychain
+          security set-keychain-settings -t 3600 -u test.keychain
+          
+          # 解码证书
+          echo "$APPLE_CERTIFICATE" | base64 -d > certificate.p12
+          
+          # 尝试导入证书
+          echo "尝试导入证书..."
+          if security import certificate.p12 -k test.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign; then
+            echo "✓ 证书导入成功"
+            
+            # 列出可用的签名身份
+            echo "可用的签名身份:"
+            security find-identity -v test.keychain
+            
+            # 设置密钥链分区列表
+            security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" test.keychain
+            
+          else
+            echo "✗ 证书导入失败"
+            exit 1
+          fi
+          
+          # 清理
+          rm certificate.p12
+          security delete-keychain test.keychain
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+
+      - name: Build macOS app with signing (ARM64 only)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          # 不创建 release，只构建
+          tagName: ""
+          releaseName: ""
+          releaseBody: ""
+          releaseDraft: false
+          prerelease: false
+          args: --target aarch64-apple-darwin
+
+      - name: Verify build output
+        run: |
+          echo "🔍 检查构建输出..."
+          find src-tauri/target -name "*.app" -o -name "*.dmg" | head -10
+          
+          # 验证签名
+          if find src-tauri/target -name "*.app" | head -1 | xargs -I{} codesign -dv --verbose=4 {}; then
+            echo "✓ 应用签名验证成功"
+          else
+            echo "✗ 应用签名验证失败"
+          fi
+
+      - name: Upload signed app
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-macos-app-arm64
+          path: |
+            src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app
+            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+          retention-days: 7
+          if-no-files-found: warn

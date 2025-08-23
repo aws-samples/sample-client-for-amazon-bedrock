@@ -1,0 +1,107 @@
+name: "test-macos-signing-fixed"
+
+on: 
+  workflow_dispatch: # Manual trigger only
+
+jobs:
+  test-macos-signing:
+    permissions:
+      contents: write
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Install frontend dependencies
+        run: yarn install
+
+      - name: Debug Certificate Configuration
+        run: |
+          echo "🔍 调试证书配置..."
+          echo "APPLE_CERTIFICATE 长度: ${#APPLE_CERTIFICATE}"
+          echo "APPLE_CERTIFICATE_PASSWORD 长度: ${#APPLE_CERTIFICATE_PASSWORD}"
+          echo "APPLE_SIGNING_IDENTITY: '$APPLE_SIGNING_IDENTITY'"
+          
+          # 检查证书是否为有效的 base64
+          if echo "$APPLE_CERTIFICATE" | base64 -d > /tmp/test_cert.p12 2>/dev/null; then
+            echo "✓ 证书 base64 解码成功"
+            ls -la /tmp/test_cert.p12
+            
+            # 测试不同的密码
+            echo "测试空密码..."
+            if openssl pkcs12 -info -in /tmp/test_cert.p12 -password "pass:" -noout 2>/dev/null; then
+              echo "✓ 空密码验证成功"
+              CERT_PASSWORD=""
+            else
+              echo "✗ 空密码验证失败"
+              echo "测试设置的密码..."
+              if openssl pkcs12 -info -in /tmp/test_cert.p12 -password "pass:$APPLE_CERTIFICATE_PASSWORD" -noout 2>/dev/null; then
+                echo "✓ 设置的密码验证成功"
+                CERT_PASSWORD="$APPLE_CERTIFICATE_PASSWORD"
+              else
+                echo "✗ 设置的密码验证失败"
+              fi
+            fi
+            
+            echo "最终使用密码: '$CERT_PASSWORD'"
+          else
+            echo "✗ 证书 base64 解码失败"
+            exit 1
+          fi
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+
+      - name: Build macOS app with signing (ARM64 only)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          tagName: ""
+          releaseName: ""
+          releaseBody: ""
+          releaseDraft: false
+          prerelease: false
+          args: --target aarch64-apple-darwin
+
+      - name: Verify build output
+        run: |
+          echo "🔍 检查构建输出..."
+          find src-tauri/target -name "*.app" -o -name "*.dmg" | head -10
+          
+          # 验证签名
+          APP_PATH=$(find src-tauri/target -name "*.app" | head -1)
+          if [[ -n "$APP_PATH" ]]; then
+            echo "验证应用签名: $APP_PATH"
+            codesign -dv --verbose=4 "$APP_PATH" || echo "签名验证失败"
+            
+            echo "检查签名身份:"
+            codesign -dv "$APP_PATH" 2>&1 | grep "Authority=" || echo "无法获取签名身份"
+          fi
+
+      - name: Upload signed app
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-macos-app-arm64-fixed
+          path: |
+            src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app
+            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+          retention-days: 7
+          if-no-files-found: warn
