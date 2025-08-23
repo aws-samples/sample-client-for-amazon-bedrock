@@ -1,0 +1,55 @@
+name: "setup-api-key-guide"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup-guide:
+    runs-on: ubuntu-latest
+    steps:
+      - name: App Store Connect API Key Setup Guide
+        run: |
+          echo "🔑 App Store Connect API 密钥配置指南"
+          echo "=================================================="
+          echo ""
+          echo "📋 第一步：在 Apple Developer 账户中创建 API 密钥"
+          echo "1. 访问: https://appstoreconnect.apple.com/access/api"
+          echo "2. 点击 'Keys' 标签"
+          echo "3. 点击 '+' 创建新密钥"
+          echo "4. Name: 'GitHub Actions Notarization'"
+          echo "5. Access: 选择 'Developer' 角色"
+          echo "6. 点击 'Generate'"
+          echo ""
+          echo "📝 第二步：记录重要信息"
+          echo "- 下载 .p8 文件 (只能下载一次!)"
+          echo "- 记录 Key ID (10个字符)"
+          echo "- 记录 Issuer ID (页面顶部的 UUID)"
+          echo ""
+          echo "🔧 第三步：在 GitHub 中设置 Secrets"
+          echo "访问: https://github.com/aws-samples/sample-client-for-amazon-bedrock/settings/secrets/actions"
+          echo ""
+          echo "需要添加的 Secrets:"
+          echo "┌─────────────────────┬──────────────────────────────────────┐"
+          echo "│ Secret Name         │ Value                                │"
+          echo "├─────────────────────┼──────────────────────────────────────┤"
+          echo "│ APPLE_API_KEY       │ .p8 文件的完整内容                    │"
+          echo "│                     │ (包括 -----BEGIN PRIVATE KEY----- 等) │"
+          echo "├─────────────────────┼──────────────────────────────────────┤"
+          echo "│ APPLE_API_KEY_ID    │ 10个字符的 Key ID                     │"
+          echo "│                     │ 例如: ABC1234567                     │"
+          echo "├─────────────────────┼──────────────────────────────────────┤"
+          echo "│ APPLE_API_ISSUER    │ UUID 格式的 Issuer ID                │"
+          echo "│                     │ 例如: 12345678-1234-1234-1234-123456789012 │"
+          echo "└─────────────────────┴──────────────────────────────────────┘"
+          echo ""
+          echo "💡 .p8 文件内容示例:"
+          echo "-----BEGIN PRIVATE KEY-----"
+          echo "MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQg..."
+          echo "...更多内容..."
+          echo "-----END PRIVATE KEY-----"
+          echo ""
+          echo "✅ 配置完成后，运行 'test-api-key-notarization' 工作流验证"
+          echo ""
+          echo "🔗 参考文档:"
+          echo "- https://developer.apple.com/documentation/appstoreconnectapi/creating_api_keys_for_app_store_connect_api"
+          echo "- https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution"

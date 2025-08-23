@@ -1,0 +1,72 @@
+name: "optimized-notarization"
+
+on:
+  workflow_dispatch:
+    inputs:
+      timeout_minutes:
+        description: 'Notarization timeout in minutes'
+        required: false
+        default: '30'
+        type: string
+
+jobs:
+  optimized-notarization:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Optimized Notarization Strategy
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          TIMEOUT_MINUTES: ${{ github.event.inputs.timeout_minutes }}
+        run: |
+          echo "🚀 优化的公证策略测试"
+          echo "=================================="
+          echo "超时设置: ${TIMEOUT_MINUTES} 分钟"
+          echo ""
+          
+          # 1. 检查当前队列状态
+          echo "📊 检查当前公证队列..."
+          xcrun notarytool store-credentials "test" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID"
+          
+          # 获取进行中的提交数量
+          IN_PROGRESS_COUNT=$(xcrun notarytool history --keychain-profile "test" --output-format json | jq '.history[] | select(.status == "In Progress")' | jq -s length)
+          echo "当前进行中的提交数量: $IN_PROGRESS_COUNT"
+          
+          if [ "$IN_PROGRESS_COUNT" -gt 5 ]; then
+            echo "⚠️ 警告: 队列中有 $IN_PROGRESS_COUNT 个进行中的提交"
+            echo "建议等待队列清空后再提交新的公证请求"
+          fi
+          
+          # 2. Apple 官方建议的最佳实践
+          echo ""
+          echo "📋 Apple 公证最佳实践:"
+          echo "1. 使用 App Store Connect API 密钥而不是 Apple ID"
+          echo "2. 设置合理的超时时间 (建议 30-60 分钟)"
+          echo "3. 避免同时提交多个应用"
+          echo "4. 在非高峰时间提交 (美国时间深夜/早晨)"
+          echo "5. 监控 Apple 系统状态页面"
+          echo ""
+          
+          # 3. 建议的工作流配置
+          echo "🔧 建议的 tauri-action 配置:"
+          echo "env:"
+          echo "  # 使用 API 密钥 (推荐)"
+          echo "  APPLE_API_KEY: \${{ secrets.APPLE_API_KEY }}"
+          echo "  APPLE_API_KEY_ID: \${{ secrets.APPLE_API_KEY_ID }}"
+          echo "  APPLE_API_ISSUER: \${{ secrets.APPLE_API_ISSUER }}"
+          echo "  # 或者使用 Apple ID (备选)"
+          echo "  # APPLE_ID: \${{ secrets.APPLE_ID }}"
+          echo "  # APPLE_PASSWORD: \${{ secrets.APPLE_PASSWORD }}"
+          echo "  # APPLE_TEAM_ID: \${{ secrets.APPLE_TEAM_ID }}"
+          echo ""
+          
+          # 清理
+          xcrun notarytool delete-credentials "test" || true
+          
+          echo "✅ 分析完成"

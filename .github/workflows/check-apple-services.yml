@@ -1,0 +1,48 @@
+name: "check-apple-services"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-services:
+    runs-on: macos-latest
+    steps:
+      - name: Check Apple Developer Services Status
+        run: |
+          echo "🔍 检查 Apple 开发者服务状态..."
+          echo "=================================="
+          
+          echo "📊 当前时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo ""
+          
+          # 检查网络连接到 Apple 服务器
+          echo "🌐 测试网络连接:"
+          echo "- Apple Developer: $(curl -s -o /dev/null -w '%{http_code}' https://developer.apple.com/ || echo 'Failed')"
+          echo "- App Store Connect: $(curl -s -o /dev/null -w '%{http_code}' https://appstoreconnect.apple.com/ || echo 'Failed')"
+          echo ""
+          
+          # 尝试获取公证服务响应时间
+          echo "⏱️ 公证服务响应测试:"
+          start_time=$(date +%s)
+          if xcrun notarytool history --apple-id "test@example.com" --password "test" --team-id "test" 2>/dev/null; then
+            echo "✅ 公证服务响应正常"
+          else
+            end_time=$(date +%s)
+            response_time=$((end_time - start_time))
+            echo "⚠️ 公证服务响应时间: ${response_time}秒 (预期: <5秒)"
+          fi
+          echo ""
+          
+          # 检查 Xcode 和工具版本
+          echo "🛠️ 开发工具版本:"
+          echo "- Xcode: $(xcode-select --version)"
+          echo "- notarytool: $(xcrun notarytool --version 2>/dev/null || echo 'Not available')"
+          echo "- macOS: $(sw_vers -productVersion)"
+          echo ""
+          
+          # 建议
+          echo "💡 建议:"
+          echo "1. 检查 Apple 系统状态: https://developer.apple.com/system-status/"
+          echo "2. 如果服务正常，考虑使用 App Store Connect API 密钥"
+          echo "3. 监控公证队列，避免在高峰期提交"
+          echo "4. 考虑分批提交，避免同时提交多个应用"
