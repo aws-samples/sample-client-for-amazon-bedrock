@@ -47,3 +47,21 @@ dev
 
 # zip
 *.zip
+
+# Local development scripts and documentation
+/scripts/
+APPLE_*.md
+CERTIFICATE_*.md
+DEVICE_*.md
+DMG_*.md
+EXECUTION_*.md
+FINAL_*.md
+FIX_*.md
+NOTARIZATION_*.md
+P12_*.md
+QUICK_*.md
+RUN_*.md
+SECRETS_*.md
+SECURITY_*.md
+STEP_*.md
+src-tauri/tauri.conf.json.backup
