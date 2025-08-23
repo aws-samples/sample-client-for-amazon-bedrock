@@ -1,0 +1,166 @@
+name: "diagnose-notarization"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose-apple-config:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Diagnose Apple ID Configuration
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          echo "🔍 Apple ID 公证配置诊断"
+          echo "=========================="
+          
+          # 检查必需的环境变量
+          if [ -z "$APPLE_ID" ] || [ -z "$APPLE_PASSWORD" ] || [ -z "$APPLE_TEAM_ID" ]; then
+            echo "❌ 缺少必需的环境变量"
+            echo "APPLE_ID: ${APPLE_ID:+设置} ${APPLE_ID:-未设置}"
+            echo "APPLE_PASSWORD: ${APPLE_PASSWORD:+设置} ${APPLE_PASSWORD:-未设置}"
+            echo "APPLE_TEAM_ID: ${APPLE_TEAM_ID:+设置} ${APPLE_TEAM_ID:-未设置}"
+            exit 1
+          fi
+          
+          echo "✅ 所有必需的环境变量都已设置"
+          
+          # 检查 Apple ID 格式
+          if [[ "$APPLE_ID" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+            echo "✅ Apple ID 格式正确: $APPLE_ID"
+          else
+            echo "❌ Apple ID 格式不正确: $APPLE_ID"
+          fi
+          
+          # 检查 Team ID 格式
+          if [[ "$APPLE_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]; then
+            echo "✅ Team ID 格式正确: $APPLE_TEAM_ID"
+          else
+            echo "❌ Team ID 格式不正确: $APPLE_TEAM_ID (长度: ${#APPLE_TEAM_ID})"
+          fi
+          
+          # 检查 App-Specific Password 格式
+          echo "Apple Password 长度: ${#APPLE_PASSWORD}"
+          if [[ ${#APPLE_PASSWORD} -eq 19 && "$APPLE_PASSWORD" =~ ^[a-z]{4}-[a-z]{4}-[a-z]{4}-[a-z]{4}$ ]]; then
+            echo "✅ Apple Password 格式正确 (App-Specific Password)"
+          elif [[ ${#APPLE_PASSWORD} -eq 19 ]]; then
+            echo "⚠️  Apple Password 长度正确但格式可能不对"
+            echo "   App-Specific Password 格式应该为: xxxx-xxxx-xxxx-xxxx"
+          else
+            echo "❌ Apple Password 长度不正确 (应该是 19，包括横杠)"
+          fi
+
+      - name: Test Apple Notarization Service Connection
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          echo "🌐 测试 Apple 公证服务连接..."
+          
+          # 创建一个简单的测试文件
+          echo "test content" > test_file.txt
+          zip test_file.zip test_file.txt
+          
+          # 尝试使用 notarytool 验证配置
+          echo "验证 Apple ID 配置..."
+          
+          # 首先尝试存储凭据
+          if xcrun notarytool store-credentials "github-test" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID"; then
+            echo "✅ Apple ID 凭据验证成功"
+            
+            # 尝试获取提交历史（这会验证连接）
+            echo "测试公证服务连接..."
+            if xcrun notarytool history --keychain-profile "github-test" --output-format json; then
+              echo "✅ 公证服务连接成功"
+            else
+              echo "❌ 公证服务连接失败"
+            fi
+            
+            # 清理测试凭据
+            xcrun notarytool delete-credentials "github-test" || true
+          else
+            echo "❌ Apple ID 凭据验证失败"
+            echo "可能的原因:"
+            echo "1. Apple ID 或 App-Specific Password 不正确"
+            echo "2. Apple ID 未启用双重认证"
+            echo "3. Team ID 不正确"
+            echo "4. App-Specific Password 已过期或被撤销"
+          fi
+          
+          # 清理测试文件
+          rm -f test_file.txt test_file.zip
+
+      - name: Check Certificate and Notarization Compatibility
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          echo "🔐 检查证书和公证兼容性..."
+          
+          # 导入证书
+          echo "$APPLE_CERTIFICATE" | base64 -d > certificate.p12
+          
+          # 创建临时 keychain
+          security create-keychain -p "temp123" temp.keychain
+          security default-keychain -s temp.keychain
+          security unlock-keychain -p "temp123" temp.keychain
+          security set-keychain-settings -t 3600 -u temp.keychain
+          
+          # 导入证书
+          if security import certificate.p12 -k temp.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign; then
+            echo "✅ 证书导入成功"
+            
+            # 检查证书类型
+            echo "证书详细信息:"
+            security find-identity -v -p codesigning temp.keychain
+            
+            # 检查证书是否为 Developer ID Application
+            if security find-identity -v -p codesigning temp.keychain | grep -q "Developer ID Application"; then
+              echo "✅ 证书类型正确: Developer ID Application"
+              echo "✅ 此类型证书支持公证"
+            else
+              echo "❌ 证书类型可能不支持公证"
+              echo "需要 'Developer ID Application' 证书进行公证"
+            fi
+          else
+            echo "❌ 证书导入失败"
+          fi
+          
+          # 清理
+          security delete-keychain temp.keychain || true
+          rm -f certificate.p12
+
+      - name: Provide Recommendations
+        run: |
+          echo ""
+          echo "📋 诊断完成 - 建议的修复步骤:"
+          echo "================================"
+          echo ""
+          echo "如果 Apple ID 配置失败:"
+          echo "1. 访问 https://appleid.apple.com"
+          echo "2. 确保启用双重认证"
+          echo "3. 生成新的 App-Specific Password:"
+          echo "   - 进入 'Sign-In and Security'"
+          echo "   - 点击 'App-Specific Passwords'"
+          echo "   - 生成新密码并命名为 'GitHub Actions'"
+          echo "4. 更新 GitHub Secrets:"
+          echo "   - APPLE_PASSWORD: 使用新的 App-Specific Password"
+          echo ""
+          echo "如果证书问题:"
+          echo "1. 确保使用 'Developer ID Application' 证书"
+          echo "2. 证书必须在有效期内"
+          echo "3. 证书必须与 Team ID 匹配"
+          echo ""
+          echo "如果仍有问题:"
+          echo "1. 检查 Apple Developer 账户状态"
+          echo "2. 确认账户有公证权限"
+          echo "3. 考虑重新生成证书和 App-Specific Password"
