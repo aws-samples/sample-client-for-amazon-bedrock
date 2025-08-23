@@ -59,7 +59,7 @@ jobs:
               echo "$IN_PROGRESS_IDS" | while read id; do
                 if [ -n "$id" ]; then
                   echo "🚫 撤销提交: $id"
-                  if xcrun notarytool cancel "$id" --keychain-profile "cancel"; then
+                  if xcrun notarytool cancel "$id" --apple-id "$APPLE_ID" --password "$APPLE_PASSWORD" --team-id "$APPLE_TEAM_ID"; then
                     echo "✅ 成功撤销: $id"
                   else
                     echo "❌ 撤销失败: $id"
@@ -73,7 +73,7 @@ jobs:
           if [ -n "$SPECIFIC_ID" ]; then
             echo ""
             echo "🎯 撤销指定的提交: $SPECIFIC_ID"
-            if xcrun notarytool cancel "$SPECIFIC_ID" --keychain-profile "cancel"; then
+            if xcrun notarytool cancel "$SPECIFIC_ID" --apple-id "$APPLE_ID" --password "$APPLE_PASSWORD" --team-id "$APPLE_TEAM_ID"; then
               echo "✅ 成功撤销指定提交: $SPECIFIC_ID"
             else
               echo "❌ 撤销指定提交失败: $SPECIFIC_ID"
