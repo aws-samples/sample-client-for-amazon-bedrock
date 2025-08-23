@@ -1,0 +1,63 @@
+name: "monitor-notarization"
+
+on:
+  workflow_dispatch:
+    inputs:
+      submission_id:
+        description: 'Notarization Submission ID to monitor (optional)'
+        required: false
+        type: string
+
+jobs:
+  monitor:
+    runs-on: macos-latest
+    steps:
+      - name: Monitor Notarization Progress
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          SUBMISSION_ID: ${{ github.event.inputs.submission_id }}
+        run: |
+          echo "🔍 公证进度监控开始 - $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "=================================="
+          
+          # 存储凭据
+          xcrun notarytool store-credentials "monitor" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID"
+          
+          echo "📋 获取最近的公证历史..."
+          xcrun notarytool history --keychain-profile "monitor" --output-format json > history.json
+          
+          # 显示最近的提交
+          echo "最近的公证提交:"
+          cat history.json | jq -r '.history[0:5][] | "🔸 ID: \(.id)\n   状态: \(.status)\n   创建时间: \(.createdDate)\n   名称: \(.name)\n"'
+          
+          # 如果指定了特定的提交ID，监控它
+          if [ -n "$SUBMISSION_ID" ]; then
+            echo "🎯 监控指定的提交: $SUBMISSION_ID"
+            xcrun notarytool info "$SUBMISSION_ID" --keychain-profile "monitor"
+          else
+            # 监控所有 In Progress 的提交
+            echo "🔄 监控所有进行中的提交..."
+            cat history.json | jq -r '.history[] | select(.status == "In Progress") | .id' | while read id; do
+              echo "📊 检查提交 $id 的详细状态:"
+              xcrun notarytool info "$id" --keychain-profile "monitor" || echo "无法获取详细信息"
+              echo "---"
+            done
+          fi
+          
+          # 显示公证服务状态
+          echo "🌐 Apple 公证服务连接测试:"
+          if xcrun notarytool history --keychain-profile "monitor" --output-format json >/dev/null 2>&1; then
+            echo "✅ 公证服务连接正常"
+          else
+            echo "❌ 公证服务连接异常"
+          fi
+          
+          # 清理凭据
+          xcrun notarytool delete-credentials "monitor" || true
+          
+          echo "🕐 监控完成时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
