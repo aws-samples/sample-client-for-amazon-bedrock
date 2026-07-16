@@ -51,15 +51,20 @@ jobs:
             echo ""
             echo "🧪 测试 API 密钥连接..."
             
-            # 创建临时密钥文件
-            echo "$APPLE_API_KEY" > /tmp/api_key.p8
+            # 受限权限临时目录 + 退出时自动清理(即使失败也清理),不打印密钥内容
+            SECRET_DIR="$(mktemp -d)"
+            trap 'rm -rf "$SECRET_DIR"' EXIT
+            umask 077
+            KEY_FILE="$SECRET_DIR/api_key.p8"
+            HIST_FILE="$SECRET_DIR/history.json"
+            printf '%s' "$APPLE_API_KEY" > "$KEY_FILE"
             
             # 测试 notarytool 连接
-            if xcrun notarytool history --key /tmp/api_key.p8 --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER" --output-format json > /tmp/history.json 2>/dev/null; then
+            if xcrun notarytool history --key "$KEY_FILE" --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER" --output-format json > "$HIST_FILE" 2>/dev/null; then
               echo "✅ API 密钥连接成功"
               
               # 检查队列状态
-              IN_PROGRESS=$(cat /tmp/history.json | jq '.history[] | select(.status == "In Progress")' | jq -s length)
+              IN_PROGRESS=$(jq '[.history[] | select(.status == "In Progress")] | length' "$HIST_FILE")
               echo "📊 当前队列中进行中的提交: $IN_PROGRESS"
               
               if [ "$IN_PROGRESS" -lt 5 ]; then
@@ -71,9 +76,6 @@ jobs:
               echo "❌ API 密钥连接失败"
               echo "请检查密钥配置是否正确"
             fi
-            
-            # 清理临时文件
-            rm -f /tmp/api_key.p8 /tmp/history.json
             
             API_KEY_CONFIGURED=true
           else
