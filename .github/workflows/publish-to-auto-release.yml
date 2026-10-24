@@ -229,7 +229,7 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Upload Android APK to release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: app-v${{ env.VERSION }}
           files: flutter_app/build/app/outputs/flutter-apk/app-release.apk
