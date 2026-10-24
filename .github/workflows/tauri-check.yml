@@ -1,0 +1,38 @@
+name: Tauri check
+
+on:
+  pull_request:
+    paths:
+      - "src-tauri/**"
+      - ".github/workflows/tauri-check.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src-tauri/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tauri-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cargo-check:
+    # Tauri 1 needs webkit2gtk 4.0, which Ubuntu 24.04 no longer ships.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: System libraries for Tauri 1
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: Rust toolchain
+        run: rustup toolchain install stable --profile minimal && rustup default stable
+      - name: Placeholder frontend (generate_context! embeds distDir ../out)
+        run: mkdir -p out && echo '<!doctype html><title>ci</title>' > out/index.html
+      - name: cargo check (Cargo.lock must be up to date)
+        run: cargo check --locked --manifest-path src-tauri/Cargo.toml
