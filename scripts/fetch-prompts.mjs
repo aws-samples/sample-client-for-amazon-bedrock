@@ -1,7 +1,9 @@
 import fs from "fs/promises";
 
 const RAW_FILE_URL = "https://raw.githubusercontent.com/";
-const MIRRORF_FILE_URL = "http://raw.fgit.ml/";
+// Fetch over HTTPS from GitHub directly (the old plain-HTTP third-party mirror
+// could be tampered with in transit).
+const MIRRORF_FILE_URL = RAW_FILE_URL;
 
 const RAW_CN_URL = "PlexPt/awesome-chatgpt-prompts-zh/main/prompts-zh.json";
 const CN_URL = MIRRORF_FILE_URL + RAW_CN_URL;
