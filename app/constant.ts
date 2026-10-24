@@ -134,11 +134,11 @@ export const KnowledgeCutOffDate: Record<string, string> = {
 
 export const DEFAULT_MODELS = [
   {
-    name: "claude-3-sonnet",
+    name: "claude-sonnet-4.6",
     available: true,
-    modelId: "anthropic.claude-3-sonnet-20240229-v1:0",
+    modelId: "global.anthropic.claude-sonnet-4-6",
     anthropic_version: "bedrock-2023-05-31",
-    displayName: "Claude3 sonnet",
+    displayName: "Claude Sonnet 4.6",
     support_image_understanding: true,
     provider: {
       id: "aws",
@@ -147,24 +147,11 @@ export const DEFAULT_MODELS = [
     },
   },
   {
-    name: "claude-3-haiku",
+    name: "claude-haiku-4.5",
     available: true,
-    modelId: "anthropic.claude-3-haiku-20240307-v1:0",
+    modelId: "global.anthropic.claude-haiku-4-5-20251001-v1:0",
     anthropic_version: "bedrock-2023-05-31",
-    displayName: "Claude3 haiku",
-    support_image_understanding: true,
-    provider: {
-      id: "aws",
-      providerName: "AWS",
-      providerType: "aws",
-    },
-  },
-  {
-    name: "claude-3.7-sonnet",
-    available: true,
-    modelId: "anthropic.claude-3-7-sonnet-20250219-v1:0",
-    anthropic_version: "bedrock-2023-05-31",
-    displayName: "Claude3.7 sonnet",
+    displayName: "Claude Haiku 4.5",
     support_image_understanding: true,
     provider: {
       id: "aws",
@@ -174,6 +161,23 @@ export const DEFAULT_MODELS = [
   },
 ] as const;
 
-export const REASONING_MODEL = ["claude-3.7-sonnet"];
+// Built-in models that reached end of life on Amazon Bedrock, mapped to their
+// replacements. Used to migrate saved settings and to keep old chats working.
+export const LEGACY_MODEL_ALIASES: Record<string, string> = {
+  "claude-3-sonnet": "claude-sonnet-4.6",
+  "claude-3-haiku": "claude-haiku-4.5",
+  "claude-3.7-sonnet": "claude-sonnet-4.6",
+};
+
+export function resolveModelName(name: string): string {
+  return LEGACY_MODEL_ALIASES[name] ?? name;
+}
+
+// Models that support extended thinking (reasoning_config).
+export const REASONING_MODEL: string[] = [
+  "claude-sonnet-4.6",
+  "claude-haiku-4.5",
+  "claude-3.7-sonnet",
+];
 export const CHAT_PAGE_SIZE = 15;
 export const MAX_RENDER_MSG_COUNT = 45;

@@ -9,6 +9,7 @@ import {
 } from "@/app/constant";
 import { useAccessStore, useAppConfig, useChatStore, useModelConfigsStore } from "@/app/store";
 import { ConverseCommandInput } from "@aws-sdk/client-bedrock-runtime";
+import { REASONING_MODEL, resolveModelName } from "@/app/constant";
 import { BedrockClient, AWSConfig } from "@/app/client/platforms/aws_utils";
 import Locale from "../../locales";
 import {
@@ -284,8 +285,7 @@ export class ClaudeApi implements LLMApi {
       model: modelConfig.model
     };
     console.log("modelConfig", modelConfig)
-    // check if modelConfig.model is claude-3-7-sonnet
-    if (requestPayload.model === "claude-3.7-sonnet") {
+    if (REASONING_MODEL.includes(resolveModelName(requestPayload.model))) {
       requestPayload.reasoning_config = modelConfig.reasoning_config
     }
     if (requestPayload.reasoning_config?.type === "enabled") {
@@ -296,7 +296,13 @@ export class ClaudeApi implements LLMApi {
   }
 
   async chat(options: ChatOptions) {
-    const visionModel = isVisionModel(options.config.model);
+    // Pass the model list so support_image_understanding is honoured; without it
+    // only name patterns ("vision", "claude-3") count, and images and
+    // documents are silently dropped for other models.
+    const visionModel = isVisionModel(
+      options.config.model,
+      useAppConfig.getState().models,
+    );
 
     const modelConfig = {
       ...useAppConfig.getState().modelConfig,
@@ -408,13 +414,19 @@ export class ClaudeApi implements LLMApi {
       content: visionModel ? v.content : getMessageTextContent(v),
     }));
 
-    const currentModel = models.find((v) => v.name === modelConfig.model);
+    const currentModel =
+      models.find((v) => v.name === modelConfig.model) ??
+      models.find((v) => v.name === resolveModelName(modelConfig.model));
     const modelID = currentModel?.modelId; // this.get_model_id(modelConfig.model);
     const modelVersion = currentModel?.anthropic_version; // this.get_model_version(modelConfig.model);
 
     if (!modelID || !modelVersion) {
       throw new Error(`Could not find modelID or modelVersion.`);
     }
+
+    // Claude 4 and later on Bedrock reject temperature and top_p together.
+    const omitTopP =
+      /anthropic\.claude/.test(modelID) && !/claude-3/.test(modelID);
 
     const requestPayload: any = this.convertMessagePayload(
       messages,
@@ -490,11 +502,11 @@ export class ClaudeApi implements LLMApi {
           inferenceConfig: {
             maxTokens: requestPayload.max_tokens,
             temperature: requestPayload.temperature,
-            topP: requestPayload.top_p
+            topP: omitTopP ? undefined : requestPayload.top_p,
           }
         }
         console.log("requestPayload.model", requestPayload.model)
-        if (requestPayload.model === "claude-3.7-sonnet" && requestPayload.reasoning_config?.type === "enabled") {
+        if (REASONING_MODEL.includes(resolveModelName(requestPayload.model)) && requestPayload.reasoning_config?.type === "enabled") {
           payload.additionalModelRequestFields = { "reasoning_config": requestPayload.reasoning_config }
         }
         const response = await client.converseStream(payload);
@@ -552,7 +564,7 @@ export class ClaudeApi implements LLMApi {
           inferenceConfig: {
             maxTokens: requestPayload.max_tokens,
             temperature: requestPayload.temperature,
-            topP: requestPayload.top_p
+            topP: omitTopP ? undefined : requestPayload.top_p,
           }
         }
 

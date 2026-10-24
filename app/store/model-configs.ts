@@ -1,4 +1,4 @@
-import { StoreKey } from "../constant";
+import { LEGACY_MODEL_ALIASES, StoreKey, resolveModelName } from "../constant";
 import { createPersistStore } from "../utils/store";
 
 export interface ModelSpecificConfig {
@@ -19,8 +19,8 @@ export interface ModelConfigsState {
 
 const DEFAULT_MODEL_CONFIGS_STATE = {
   modelConfigs: {} as Record<string, ModelSpecificConfig>,
-  defaultModel: "claude-3-sonnet", // matches DEFAULT_CONFIG.modelConfig.model
-  currentConfigModel: "claude-3-sonnet",
+  defaultModel: "claude-sonnet-4.6", // matches DEFAULT_CONFIG.modelConfig.model
+  currentConfigModel: "claude-sonnet-4.6",
 };
 
 export const useModelConfigsStore = createPersistStore(
@@ -70,6 +70,27 @@ export const useModelConfigsStore = createPersistStore(
   }),
   {
     name: StoreKey.ModelConfigs,
-    version: 1,
+    version: 2,
+    migrate(persistedState, version) {
+      const state = persistedState as any;
+      if (version < 2) {
+        // Built-in Claude 3 / 3.7 models reached end of life on Bedrock.
+        state.defaultModel = resolveModelName(
+          state.defaultModel ?? DEFAULT_MODEL_CONFIGS_STATE.defaultModel,
+        );
+        state.currentConfigModel = resolveModelName(
+          state.currentConfigModel ?? state.defaultModel,
+        );
+        const configs = { ...(state.modelConfigs ?? {}) };
+        for (const [oldName, newName] of Object.entries(LEGACY_MODEL_ALIASES)) {
+          if (configs[oldName] && !configs[newName]) {
+            configs[newName] = configs[oldName];
+          }
+          delete configs[oldName];
+        }
+        state.modelConfigs = configs;
+      }
+      return state;
+    },
   },
 );
