@@ -7,7 +7,7 @@ jobs:
   test-api-notarization:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       
       - name: Test App Store Connect API Key Notarization
         env:
