@@ -1,4 +1,5 @@
 "use client";
+import type { JSX } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import React, {
   useState,

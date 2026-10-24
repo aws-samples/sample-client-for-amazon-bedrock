@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { IconButton } from "./button";
 import { ErrorBoundary } from "./error";
 
