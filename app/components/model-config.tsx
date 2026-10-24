@@ -1,16 +1,30 @@
 import {
-  ModalConfigValidator, ModelConfig, useAppConfig, useAccessStore,
+  ModalConfigValidator, ModelConfig, useAppConfig, useAccessStore, useModelConfigsStore,
 } from "../store";
 import { getServerSideConfig } from "../config/server";
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import Locale from "../locales";
 import { InputRange } from "./input-range";
 import { ListItem, Select } from "./ui-lib";
 // import { useAllModels } from "../utils/hooks";
 import { IconButton } from "./button";
 import ResetIcon from "../icons/reload.svg";
+import UploadIcon from "../icons/upload.svg";
 import { LLMModel } from "../client/api";
 import { DEFAULT_MODELS } from "@/app/constant";
+import { ModelDropdown } from "./model-dropdown";
+
+// 每个模型的特定配置定义
+const MODEL_SPECIFIC_CONFIGS = {
+  "claude-3.7-sonnet": {
+    hasReasoning: true,
+  },
+};
+
+// 默认配置
+const DEFAULT_MODEL_CONFIG = {
+  hasReasoning: false,
+};
 
 export function ModelConfigList(props: {
   modelConfig: ModelConfig;
@@ -18,8 +32,45 @@ export function ModelConfigList(props: {
 }) {
   const appConfig = useAppConfig();
   const accessStore = useAccessStore();
+  const modelConfigsStore = useModelConfigsStore();
+
+  // Subscribe to store changes properly
+  const defaultModel = modelConfigsStore.defaultModel;
+  const currentConfigModel = modelConfigsStore.currentConfigModel;
 
   const { provider, useBRProxy, BRProxyUrl, openaiApiKey } = accessStore;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 获取当前模型的特定配置
+  const getModelConfig = (modelName: string) => {
+    // 查找完全匹配
+    if (MODEL_SPECIFIC_CONFIGS[modelName as keyof typeof MODEL_SPECIFIC_CONFIGS]) {
+      return {
+        ...DEFAULT_MODEL_CONFIG,
+        ...MODEL_SPECIFIC_CONFIGS[modelName as keyof typeof MODEL_SPECIFIC_CONFIGS]
+      };
+    }
+    
+    // 查找部分匹配
+    for (const key in MODEL_SPECIFIC_CONFIGS) {
+      if (modelName.includes(key)) {
+        return {
+          ...DEFAULT_MODEL_CONFIG,
+          ...MODEL_SPECIFIC_CONFIGS[key as keyof typeof MODEL_SPECIFIC_CONFIGS]
+        };
+      }
+    }
+    
+    // 没有匹配，返回默认配置
+    return { ...DEFAULT_MODEL_CONFIG };
+  };
+  
+  const [modelSpecificConfig, setModelSpecificConfig] = useState(getModelConfig(props.modelConfig.model));
+  
+  // 当模型变化时更新特定配置
+  useEffect(() => {
+    setModelSpecificConfig(getModelConfig(props.modelConfig.model));
+  }, [props.modelConfig.model]);
 
   useEffect(() => {
     const storedModels: LLMModel[] = appConfig.models;
@@ -34,66 +85,239 @@ export function ModelConfigList(props: {
     }
   });
 
+  // Handle file selection and loading
+  const handleFileLoad = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    console.log("[JSON Config Debug] Starting to load file:", file.name, "Size:", file.size, "bytes");
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        console.log("[JSON Config Debug] File content length:", content.length);
+        console.log("[JSON Config Debug] Raw file content:", content.substring(0, 500) + (content.length > 500 ? "..." : ""));
+
+        const remote_models = JSON.parse(content);
+        console.log("[JSON Config Debug] Parsed JSON successfully. Number of models:", Array.isArray(remote_models) ? remote_models.length : "Not an array");
+        console.log("[JSON Config Debug] Parsed models structure:", remote_models);
+
+        // Check if models have support_streaming field
+        if (Array.isArray(remote_models)) {
+          remote_models.forEach((model, index) => {
+            console.log(`[JSON Config Debug] Model ${index}:`, {
+              name: model.name,
+              displayName: model.displayName,
+              support_streaming: model.support_streaming,
+              available: model.available,
+              provider: model.provider
+            });
+          });
+        }
+
+        // Get current config before update
+        const currentConfig = appConfig;
+        console.log("[JSON Config Debug] Current config models before update:", currentConfig.models.length);
+
+        appConfig.update(
+          (config) => {
+            console.log("[JSON Config Debug] Updating config.models...");
+            config.models = remote_models as any as LLMModel[];
+            console.log("[JSON Config Debug] Config updated. New models count:", config.models.length);
+
+            // Check if current model exists in new models and update its support_streaming
+            const currentModelName = config.modelConfig.model;
+            const currentModelInNewList = remote_models.find((m: any) => m.name === currentModelName);
+
+            if (currentModelInNewList && currentModelInNewList.support_streaming !== undefined) {
+              console.log("[JSON Config Debug] Updating global modelConfig.support_streaming for current model:", currentModelName);
+              console.log("[JSON Config Debug] Old support_streaming:", config.modelConfig.support_streaming);
+              console.log("[JSON Config Debug] New support_streaming:", currentModelInNewList.support_streaming);
+
+              config.modelConfig.support_streaming = currentModelInNewList.support_streaming;
+
+              console.log("[JSON Config Debug] Global modelConfig updated:", {
+                model: config.modelConfig.model,
+                support_streaming: config.modelConfig.support_streaming
+              });
+            } else {
+              console.log("[JSON Config Debug] Current model not found in new list or no support_streaming defined");
+            }
+          }
+        );
+
+        // Verify the update
+        setTimeout(() => {
+          const updatedConfig = appConfig;
+          console.log("[JSON Config Debug] Verification - Updated config models:", updatedConfig.models.length);
+          updatedConfig.models.forEach((model, index) => {
+            console.log(`[JSON Config Debug] Verification - Model ${index}:`, {
+              name: model.name,
+              displayName: model.displayName,
+              support_streaming: (model as any).support_streaming,
+              available: model.available
+            });
+          });
+        }, 100);
+
+        console.log("[JSON Config Debug] Models loaded from file successfully");
+      } catch (error) {
+        console.error("[JSON Config Debug] Error parsing JSON file:", error);
+        alert("Error: Invalid JSON file format");
+      }
+    };
+
+    reader.onerror = (error) => {
+      console.error("[JSON Config Debug] FileReader error:", error);
+    };
+
+    reader.readAsText(file);
+
+    // Reset the input value so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <>
-      <ListItem title={Locale.Settings.Model}>
-        <div className="password-input-container">
-          <Select
-            value={props.modelConfig.model}
-            onChange={(e) => {
-              props.updateConfig(
-                (config) =>
-                (config.model = ModalConfigValidator.model(
-                  e.currentTarget.value,
-                )),
-              );
-            }}
-          >
-            {appConfig.models
-              .filter((v) => v.available)
-              .map((v, i) => (
-                <option value={v.name} key={i}>
-                  {v.displayName || v.name}({v.provider?.providerName})
-                </option>
-              ))}
-          </Select>
+      {/* Model Configuration Section - Full Width */}
+      <div style={{
+        border: "var(--border-in-light)",
+        borderRadius: "10px",
+        boxShadow: "var(--card-shadow)",
+        marginBottom: "20px",
+        background: "var(--white)",
+        padding: "20px"
+      }}>
+        {/* Header Row: Title + Management Buttons */}
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "16px"
+        }}>
+          <div style={{
+            fontSize: "14px",
+            fontWeight: "bolder",
+            color: "var(--black)"
+          }}>
+            Model Configuration
+          </div>
 
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <IconButton
+              onClick={async () => {
+                try {
+                  const http_headers: any = {
+                  };
+                  let model_url = "https://www.agentnumber47.com/bedrock/bedrock-models.json";
+                  if (provider === "AWS" && useBRProxy === "True") {
+                    http_headers["Authorization"] = `Bearer ${openaiApiKey}`;
+                    model_url = BRProxyUrl + "/user/model/list-for-brclient?f=";
+                  }
 
-          <IconButton
-            onClick={async () => {
-              try {
-                const http_headers: any = {
-                };
-                let model_url = "https://eiai.fun/bedrock-models.json";
-                if (provider === "AWS" && useBRProxy === "True") {
-                  http_headers["Authorization"] = `Bearer ${openaiApiKey}`;
-                  model_url = BRProxyUrl + "/user/model/list-for-brclient?f=";
+                  const response = await fetch(
+                    model_url + "?f=" + new Date().getTime().toString(),
+                    {
+                      method: 'GET',
+                      headers: http_headers,
+                    },
+                  );
+                  let remote_models = await response.json();
+                  if (provider === "AWS" && useBRProxy === "True") {
+                    remote_models = remote_models.data;
+                  }
+                  appConfig.update(
+                    (config) =>
+                      (config.models = remote_models as any as LLMModel[]),
+                  );
+                } catch (e) {
+                  console.error(e);
                 }
+              }}
+              icon={<ResetIcon />}
+              title="Refresh models from remote"
+            />
 
-                const response = await fetch(
-                  model_url + "?f=" + new Date().getTime().toString(),
-                  {
-                    method: 'GET',
-                    headers: http_headers,
-                  },
-                );
-                let remote_models = await response.json();
-                if (provider === "AWS" && useBRProxy === "True") {
-                  remote_models = remote_models.data;
-                }
-                appConfig.update(
-                  (config) =>
-                    (config.models = remote_models as any as LLMModel[]),
-                );
-              } catch (e) {
-                console.error(e);
-              }
-            }}
-            icon={<ResetIcon />}
-          />
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileLoad}
+              accept=".json"
+              style={{ display: 'none' }}
+            />
 
+            <IconButton
+              onClick={() => {
+                fileInputRef.current?.click();
+              }}
+              icon={<UploadIcon />}
+              title="Load models from local JSON file"
+            />
+          </div>
         </div>
+
+        {/* Model Dropdown Row */}
+        <ModelDropdown
+          models={appConfig.models}
+          selectedModel={currentConfigModel}
+          defaultModel={defaultModel}
+          onModelSelect={(modelName) => {
+            console.log("[Model Config Debug] Switching config view to:", modelName);
+            modelConfigsStore.setCurrentConfigModel(modelName);
+            // Update the model-specific config display
+            setModelSpecificConfig(getModelConfig(modelName));
+          }}
+          onDefaultToggle={(modelName) => {
+            console.log("[Model Config Debug] onDefaultToggle called for model:", modelName);
+            console.log("[Model Config Debug] Current default model:", defaultModel);
+            modelConfigsStore.setDefaultModel(modelName);
+            console.log("[Model Config Debug] New default model set:", modelName);
+
+            // Update the global model config to match the new default
+            props.updateConfig((config) => {
+              config.model = ModalConfigValidator.model(modelName);
+
+              // Auto-update support_streaming based on model definition
+              const selectedModel = appConfig.models.find(m => m.name === modelName);
+              if (selectedModel && (selectedModel as any).support_streaming !== undefined) {
+                config.support_streaming = (selectedModel as any).support_streaming;
+              }
+            });
+          }}
+        />
+      </div>
+
+      <ListItem
+        title={`${Locale.Settings.Access.AWS.Region.Title} (${appConfig.models.find(m => m.name === currentConfigModel)?.displayName || currentConfigModel})`}
+        subTitle="Configure AWS region for this model. Leave empty to use system region."
+      >
+        <input
+          type="text"
+          placeholder="Leave empty to use system region"
+          value={modelConfigsStore.getModelConfig(currentConfigModel).region || ""}
+          onChange={(e) => {
+            const newRegion = e.currentTarget.value;
+            console.log("[Model Config Debug] Updating region for", currentConfigModel, "to:", newRegion);
+            modelConfigsStore.updateModelConfig(currentConfigModel, {
+              region: newRegion,
+            });
+          }}
+          style={{
+            width: "100%",
+            padding: "10px",
+            border: "var(--border-in-light)",
+            borderRadius: "10px",
+            backgroundColor: "var(--white)",
+            color: "var(--black)",
+            fontFamily: "inherit",
+            fontSize: "14px",
+          }}
+        />
       </ListItem>
+
       <ListItem
         title={Locale.Settings.Temperature.Title}
         subTitle={Locale.Settings.Temperature.SubTitle}
@@ -151,84 +375,61 @@ export function ModelConfigList(props: {
           }
         ></input>
       </ListItem>
+      <ListItem
+        title={Locale.Settings.InjectSystemPrompts.Title}
+        subTitle={Locale.Settings.InjectSystemPrompts.SubTitle}
+      >
+        <input
+          type="checkbox"
+          checked={props.modelConfig.enableInjectSystemPrompts}
+          onChange={(e) =>
+            props.updateConfig(
+              (config) =>
+              (config.enableInjectSystemPrompts =
+                e.currentTarget.checked),
+            )
+          }
+        ></input>
+      </ListItem>
 
-      {props.modelConfig.model.startsWith("gemini") ? null : (
-        <>
-          <ListItem
-            title={Locale.Settings.PresencePenalty.Title}
-            subTitle={Locale.Settings.PresencePenalty.SubTitle}
-          >
-            <InputRange
-              value={props.modelConfig.presence_penalty?.toFixed(1)}
-              min="-2"
-              max="2"
-              step="0.1"
-              onChange={(e) => {
-                props.updateConfig(
-                  (config) =>
-                  (config.presence_penalty =
-                    ModalConfigValidator.presence_penalty(
-                      e.currentTarget.valueAsNumber,
-                    )),
-                );
-              }}
-            ></InputRange>
-          </ListItem>
+      <ListItem
+        title="Support Streaming"
+        subTitle="Enable streaming responses for real-time output"
+      >
+        <input
+          type="checkbox"
+          checked={props.modelConfig.support_streaming ?? true}
+          onChange={(e) => {
+            const newValue = e.currentTarget.checked;
+            console.log("[Support Streaming Debug] Checkbox changed to:", newValue);
+            console.log("[Support Streaming Debug] Current model:", props.modelConfig.model);
 
-          <ListItem
-            title={Locale.Settings.FrequencyPenalty.Title}
-            subTitle={Locale.Settings.FrequencyPenalty.SubTitle}
-          >
-            <InputRange
-              value={props.modelConfig.frequency_penalty?.toFixed(1)}
-              min="-2"
-              max="2"
-              step="0.1"
-              onChange={(e) => {
-                props.updateConfig(
-                  (config) =>
-                  (config.frequency_penalty =
-                    ModalConfigValidator.frequency_penalty(
-                      e.currentTarget.valueAsNumber,
-                    )),
-                );
-              }}
-            ></InputRange>
-          </ListItem>
-
-          <ListItem
-            title={Locale.Settings.InjectSystemPrompts.Title}
-            subTitle={Locale.Settings.InjectSystemPrompts.SubTitle}
-          >
-            <input
-              type="checkbox"
-              checked={props.modelConfig.enableInjectSystemPrompts}
-              onChange={(e) =>
-                props.updateConfig(
-                  (config) =>
-                  (config.enableInjectSystemPrompts =
-                    e.currentTarget.checked),
-                )
+            props.updateConfig(
+              (config) => {
+                console.log("[Support Streaming Debug] Before update:", config.support_streaming);
+                config.support_streaming = newValue;
+                console.log("[Support Streaming Debug] After update:", config.support_streaming);
               }
-            ></input>
-          </ListItem>
+            );
+          }}
+        ></input>
+      </ListItem>
 
-          <ListItem
-            title={Locale.Settings.InputTemplate.Title}
-            subTitle={Locale.Settings.InputTemplate.SubTitle}
-          >
-            <input
-              type="text"
-              value={props.modelConfig.template}
-              onChange={(e) =>
-                props.updateConfig(
-                  (config) => (config.template = e.currentTarget.value),
-                )
-              }
-            ></input>
-          </ListItem>
-        </>
-      )}
+      <ListItem
+        title={Locale.Settings.InputTemplate.Title}
+        subTitle={Locale.Settings.InputTemplate.SubTitle}
+      >
+        <input
+          type="text"
+          value={props.modelConfig.template}
+          onChange={(e) =>
+            props.updateConfig(
+              (config) => (config.template = e.currentTarget.value),
+            )
+          }
+        ></input>
+      </ListItem>
+
       <ListItem
         title={Locale.Settings.HistoryCount.Title}
         subTitle={Locale.Settings.HistoryCount.SubTitle}
@@ -276,6 +477,60 @@ export function ModelConfigList(props: {
           }
         ></input>
       </ListItem>
+      {/* 添加 Reasoning Config 配置项 */}
+      {modelSpecificConfig.hasReasoning && (
+        <>
+          <ListItem
+            title={Locale.Settings.Reasoning.Title}
+            subTitle={Locale.Settings.Reasoning.SubTitle}
+          >
+            <Select
+              value={props.modelConfig.reasoning_config?.type || "disabled"}
+              onChange={(e) => {
+                const type = e.currentTarget.value as "enabled" | "disabled";
+                props.updateConfig((config) => {
+                  // 确保 reasoning_config 存在
+                  if (!config.reasoning_config) {
+                    config.reasoning_config = {
+                      type,
+                      budget_tokens: Math.min(1024, config.max_tokens - 1)
+                    };
+                  } else {
+                    config.reasoning_config.type = type;
+                  }
+                });
+              }}
+            >
+              <option value="enabled">{Locale.Settings.Reasoning.Type.Enabled}</option>
+              <option value="disabled">{Locale.Settings.Reasoning.Type.Disabled}</option>
+            </Select>
+          </ListItem>
+
+          {props.modelConfig.reasoning_config?.type === "enabled" && (
+            <ListItem
+              title={Locale.Settings.ReasoningBudget.Title}
+              subTitle={Locale.Settings.ReasoningBudget.SubTitle}
+            >
+              <input
+                type="number"
+                min={1024}
+                max={props.modelConfig.max_tokens - 1}
+                value={props.modelConfig.reasoning_config?.budget_tokens || 1024}
+                onChange={(e) => {
+                  const value = parseInt(e.currentTarget.value);
+                  const safeValue = Math.max(1024, Math.min(value, props.modelConfig.max_tokens - 1));
+                  
+                  props.updateConfig((config) => {
+                    if (config.reasoning_config) {
+                      config.reasoning_config.budget_tokens = safeValue;
+                    }
+                  });
+                }}
+              />
+            </ListItem>
+          )}
+        </>
+      )}
     </>
   );
 }

@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: yarn
+      - name: Install (yarn.lock must match package.json)
+        run: yarn install --frozen-lockfile
+      - name: Build (standalone; includes the Next.js type check)
+        run: yarn build
+      - name: Build (static export used by the desktop and mobile apps)
+        run: yarn export
+      - name: npm audit (report only)
+        # yarn.lock is the only committed lockfile; npm audit needs a package-lock,
+        # so generate a throwaway one for the report.
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm audit --omit=dev || true

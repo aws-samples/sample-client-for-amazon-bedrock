@@ -1,4 +1,5 @@
 "use client";
+import type { JSX } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import React, {
   useState,
@@ -46,6 +47,7 @@ import BottomIcon from "../icons/bottom.svg";
 import StopIcon from "../icons/pause.svg";
 import RobotIcon from "../icons/robot.svg";
 import CloudIcon from "../icons/cloud-success.svg";
+
 
 import {
   ChatMessage,
@@ -97,6 +99,7 @@ import {
   CHAT_PAGE_SIZE,
   LAST_INPUT_KEY,
   Path,
+  REASONING_MODEL,
   REQUEST_TIMEOUT_MS,
   UNFINISHED_INPUT,
 } from "../constant";
@@ -270,7 +273,20 @@ export function PromptHints(props: {
   }, [props.prompts.length]);
 
   useEffect(() => {
+    let isComposing = false;
+
+    const onCompositionStart = () => {
+      isComposing = true;
+    };
+
+    const onCompositionEnd = () => {
+      isComposing = false;
+    };
+
     const onKeyDown = (e: KeyboardEvent) => {
+      if (isComposing || e.isComposing) {
+        return;
+      }
       if (noPrompts || e.metaKey || e.altKey || e.ctrlKey) {
         return;
       }
@@ -279,8 +295,8 @@ export function PromptHints(props: {
         e.stopPropagation();
         e.preventDefault();
         const nextIndex = Math.max(
-          0,
-          Math.min(props.prompts.length - 1, selectIndex + delta),
+            0,
+            Math.min(props.prompts.length - 1, selectIndex + delta),
         );
         setSelectIndex(nextIndex);
         selectedRef.current?.scrollIntoView({
@@ -300,9 +316,15 @@ export function PromptHints(props: {
       }
     };
 
+    document.addEventListener("compositionstart", onCompositionStart);
+    document.addEventListener("compositionend", onCompositionEnd);
     window.addEventListener("keydown", onKeyDown);
 
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("compositionstart", onCompositionStart);
+      document.removeEventListener("compositionend", onCompositionEnd);
+      window.removeEventListener("keydown", onKeyDown);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.prompts.length, selectIndex]);
 
@@ -560,7 +582,7 @@ function ChatAction(props: {
 }
 
 function useScrollToBottom(
-  scrollRef: RefObject<HTMLDivElement>,
+  scrollRef: RefObject<HTMLDivElement | null>,
   detach: boolean = false,
 ) {
   // for auto-scroll
@@ -753,6 +775,8 @@ export function ChatActions(props: {
         text={"Documents"}
         icon={<CloudIcon />}
       />
+
+
 
       {showModelSelector && (
         <Selector
@@ -1348,8 +1372,8 @@ function _Chat() {
             );
             const imagesLength = images.length;
 
-            if (imagesLength > 3) {
-              images.splice(3, imagesLength - 3);
+            if (imagesLength > 10) {
+              images.splice(10, imagesLength - 10);
             }
             setAttachImages(images);
           }
@@ -1379,10 +1403,7 @@ function _Chat() {
             compressImage(file, 256 * 1024)
               .then((dataUrl) => {
                 imagesData.push(dataUrl);
-                if (
-                  imagesData.length === 3 ||
-                  imagesData.length === files.length
-                ) {
+                if (imagesData.length === files.length) {
                   setUploading(false);
                   res(imagesData);
                 }
@@ -1398,12 +1419,13 @@ function _Chat() {
     );
 
     const imagesLength = images.length;
-    if (imagesLength > 3) {
-      images.splice(3, imagesLength - 3);
+    if (imagesLength > 10) {
+      images.splice(10, imagesLength - 10);
     }
     setAttachImages(images);
   }
 
+ 
   return (
     <div className={styles.chat} key={session.id}>
       <div className="window-header" data-tauri-drag-region>
@@ -1428,7 +1450,33 @@ function _Chat() {
             {!session.topic ? DEFAULT_TOPIC : session.topic}
           </div>
           <div className="window-header-sub-title">
-            {Locale.Chat.SubTitle(session.messages.length)}
+           {Locale.Chat.SubTitle(session.messages.length)}
+          </div>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: "10px" }}>
+            <span>{session.mask.modelConfig?.model ?? ""}</span>
+            {REASONING_MODEL.includes(session.mask.modelConfig?.model ?? "")&&
+            <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <input 
+                type="checkbox"
+                style={{ margin: 0 }}
+                checked={session.mask.modelConfig?.reasoning_config?.type === "enabled"}
+                onChange={(e) => {
+                  chatStore.updateCurrentSession((session) => {
+                    if (!session.mask.modelConfig.reasoning_config) {
+                      session.mask.modelConfig.reasoning_config = {
+                        type: e.target.checked ? "enabled" : "disabled",
+                        budget_tokens: Math.min(1024, session.mask.modelConfig.max_tokens || 1024)
+                      };
+                    } else {
+                      session.mask.modelConfig.reasoning_config.type = e.target.checked ? "enabled" : "disabled";
+                    }
+                  });
+                }}
+              />
+              <span>Reasoning</span>
+            </label>
+            }
           </div>
         </div>
         <div className="window-actions">
@@ -1693,6 +1741,7 @@ function _Chat() {
             setAttachDocument(data)
           }}
         />
+        
 
         <ChatActions
           uploadImage={uploadImage}
@@ -1763,8 +1812,10 @@ function _Chat() {
                   </div>
                 );
               })}
+              
             </div>
           )}
+          
           <IconButton
             icon={<SendWhiteIcon />}
             text={Locale.Chat.Send}
@@ -1772,7 +1823,12 @@ function _Chat() {
             type="primary"
             onClick={() => doSubmit(userInput)}
           />
+          
         </label>
+        
+        
+       
+       
       </div>
 
       {showExport && (
@@ -1786,6 +1842,7 @@ function _Chat() {
           }}
         />
       )}
+
     </div>
   );
 }

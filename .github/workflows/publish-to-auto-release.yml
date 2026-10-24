@@ -28,10 +28,10 @@ jobs:
 
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: lts/*
 
@@ -52,6 +52,66 @@ jobs:
       - name: install frontend dependencies
         run: yarn install # change this to npm, pnpm or bun depending on which one you use.
 
+      - name: Debug Certificate Configuration (macOS only)
+        if: matrix.platform == 'macos-latest'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          echo "🔍 调试证书配置..."
+          echo "APPLE_CERTIFICATE 长度: ${#APPLE_CERTIFICATE}"
+          echo "APPLE_CERTIFICATE_PASSWORD 长度: ${#APPLE_CERTIFICATE_PASSWORD}"
+          echo "APPLE_SIGNING_IDENTITY: '$APPLE_SIGNING_IDENTITY'"
+          
+          # 检查证书是否为有效的 base64
+          if echo "$APPLE_CERTIFICATE" | base64 -d > /tmp/test_cert.p12 2>/dev/null; then
+            echo "✓ 证书 base64 解码成功"
+            ls -la /tmp/test_cert.p12
+            
+            # 测试不同的密码
+            echo "测试空密码..."
+            if openssl pkcs12 -info -in /tmp/test_cert.p12 -passin pass: -noout -legacy 2>/dev/null; then
+              echo "✓ 空密码验证成功"
+              CERT_PASSWORD=""
+            else
+              echo "✗ 空密码验证失败"
+              echo "测试设置的密码..."
+              if openssl pkcs12 -info -in /tmp/test_cert.p12 -passin pass:$APPLE_CERTIFICATE_PASSWORD -noout -legacy 2>/dev/null; then
+                echo "✓ 设置的密码验证成功"
+                CERT_PASSWORD="$APPLE_CERTIFICATE_PASSWORD"
+              else
+                echo "✗ 设置的密码验证失败"
+              fi
+            fi
+            
+            echo "最终使用密码: '$CERT_PASSWORD'"
+          else
+            echo "✗ 证书 base64 解码失败"
+            exit 1
+          fi
+
+      - name: Enable Detailed Notarization Logging (macOS only)
+        if: matrix.platform == 'macos-latest'
+        run: |
+          echo "🔍 启用详细的公证日志..."
+          # 启用详细的 Tauri 构建日志
+          echo "TAURI_BUNDLE_DEBUG=true" >> $GITHUB_ENV
+          echo "RUST_LOG=debug" >> $GITHUB_ENV
+          # 启用详细的公证日志
+          echo "NOTARYTOOL_VERBOSE=true" >> $GITHUB_ENV
+          # 显示当前时间作为基准
+          echo "🕐 开始构建时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          
+          # 创建一个后台进程来定期输出时间戳
+          (
+            while true; do
+              sleep 300  # 每5分钟输出一次
+              echo "⏰ 构建进行中... $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            done
+          ) &
+          echo $! > /tmp/timestamp_monitor.pid
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -59,11 +119,19 @@ jobs:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # Preferred: App Store Connect API Key (more stable)
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          # Fallback: Apple ID method (if API key not configured)
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          # 启用详细日志
+          TAURI_BUNDLE_DEBUG: true
+          RUST_LOG: debug
         with:
           tagName: app-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
           releaseName: "App v__VERSION__"
@@ -71,4 +139,211 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
-         
+
+      - name: Check Notarization Status (macOS only)
+        if: matrix.platform == 'macos-latest'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # 停止时间戳监控进程
+          if [ -f /tmp/timestamp_monitor.pid ]; then
+            kill $(cat /tmp/timestamp_monitor.pid) 2>/dev/null || true
+            rm -f /tmp/timestamp_monitor.pid
+          fi
+          
+          echo "🕐 构建完成时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "🔍 检查最近的公证状态..."
+          
+          # 存储凭据
+          xcrun notarytool store-credentials "build-check" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" || true
+          
+          # 获取最近的公证历史
+          echo "📋 最近的公证提交:"
+          xcrun notarytool history --keychain-profile "build-check" --output-format json | jq -r '.history[0:3][] | "ID: \(.id) | Status: \(.status) | Created: \(.createdDate) | Name: \(.name)"' || echo "无法获取公证历史"
+          
+          # 清理凭据
+          xcrun notarytool delete-credentials "build-check" || true
+
+  publish-android:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+
+      - name: Install Node.js dependencies
+        run: yarn install
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          sdk-platform: "android-33"
+          build-tools: "33.0.1"
+
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.2'
+          channel: 'stable'
+
+      - name: Install Flutter dependencies
+        run: |
+          cd flutter_app
+          flutter clean
+          flutter pub cache repair
+          flutter pub get
+
+      - name: Export web assets
+        run: yarn export
+
+      - name: Prepare Flutter assets
+        run: |
+          mkdir -p ./flutter_app/assets
+          zip -r ./flutter_app/assets/out.zip out
+
+      - name: Build Android APK
+        run: |
+          cd flutter_app
+          flutter build apk --release
+
+      - name: Get app version
+        id: get_version
+        run: |
+          VERSION=$(grep -o '"version": "[^"]*' src-tauri/tauri.conf.json | cut -d'"' -f4)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Upload Android APK to release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: app-v${{ env.VERSION }}
+          files: flutter_app/build/app/outputs/flutter-apk/app-release.apk
+          draft: true
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-ios:
+    permissions:
+      contents: write
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+
+      - name: Install Node.js dependencies
+        run: yarn install
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.2'
+          channel: 'stable'
+
+      - name: Verify Flutter version
+        run: flutter --version
+
+      - name: Install Flutter dependencies with clean
+        run: |
+          cd flutter_app
+          flutter clean
+          flutter pub cache repair
+          flutter pub get
+
+      # Use the exact same command as in package.json for consistency
+      - name: Build iOS app using package.json script pattern
+        run: |
+          # Export web assets
+          yarn export
+          
+          # Create assets directory and zip output
+          mkdir -p ./flutter_app/assets
+          zip -r ./flutter_app/assets/out.zip out
+
+      - name: Install Cocoapods
+        run: |
+          sudo gem install cocoapods
+          pod --version
+
+      - name: Prepare iOS build
+        run: |
+          cd flutter_app
+          flutter clean
+          flutter pub get
+          cd ios
+          rm -rf Pods Podfile.lock
+          pod install --repo-update
+
+      # Optional: Setup code signing if secrets are available
+      - name: Install Apple Certificate
+        if: env.APPLE_CERTIFICATE != ''
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD || 'temporary_password' }}
+        run: |
+          # Create a temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+          
+          # Import certificate to keychain
+          echo $APPLE_CERTIFICATE | base64 --decode > certificate.p12
+          security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          
+          # Set up provisioning profiles if available
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          
+          # Clean up
+          rm certificate.p12
+
+      - name: Build iOS (Debug)
+        run: |
+          cd flutter_app
+          flutter build ios --debug --no-codesign
+
+      - name: List build directories
+        run: |
+          find flutter_app/build -type d -name "*Debug*" || echo "No Debug directories found"
+          find flutter_app/build -name "Runner.app" || echo "No Runner.app found"
+          ls -la flutter_app/build/ios/ || echo "No ios directory"
+
+      - name: Create Debug IPA
+        run: |
+          mkdir -p flutter_app/build/ios/Debug-iphonesimulator/Payload
+          find flutter_app/build -name "Runner.app" -type d | xargs -I{} cp -r {} flutter_app/build/ios/Debug-iphonesimulator/Payload/ || echo "Failed to copy Runner.app"
+          cd flutter_app/build/ios/Debug-iphonesimulator
+          zip -r debug-ios-app.zip Payload || echo "Failed to create zip"
+
+      - name: Upload Debug IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-debug-app
+          path: flutter_app/build/ios/Debug-iphonesimulator/debug-ios-app.zip
+          retention-days: 7
+          if-no-files-found: warn

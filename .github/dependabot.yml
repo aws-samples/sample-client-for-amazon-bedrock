@@ -1,0 +1,34 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+    groups:
+      aws-sdk: { patterns: ["@aws-sdk/*"] }
+      minor-and-patch: { update-types: [minor, patch] }
+    ignore:
+      # The desktop app is on Tauri 1; Tauri 2 is a separate migration.
+      - dependency-name: "@tauri-apps/cli"
+        update-types: ["version-update:semver-major"]
+  - package-ecosystem: npm
+    directory: /electron-app
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 3
+    groups:
+      minor-and-patch: { update-types: [minor, patch] }
+  - package-ecosystem: cargo
+    directory: /src-tauri
+    schedule: { interval: monthly }
+    open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "tauri"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "tauri-build"
+        update-types: ["version-update:semver-major"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly }
+    ignore:
+      - dependency-name: "tauri-apps/tauri-action"
+        update-types: ["version-update:semver-major"]

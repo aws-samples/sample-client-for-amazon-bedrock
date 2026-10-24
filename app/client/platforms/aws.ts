@@ -7,7 +7,7 @@ import {
   REQUEST_TIMEOUT_MS,
   // ServiceProvider,
 } from "@/app/constant";
-import { useAccessStore, useAppConfig, useChatStore } from "@/app/store";
+import { useAccessStore, useAppConfig, useChatStore, useModelConfigsStore } from "@/app/store";
 import { ConverseCommandInput } from "@aws-sdk/client-bedrock-runtime";
 import { BedrockClient, AWSConfig } from "@/app/client/platforms/aws_utils";
 import Locale from "../../locales";
@@ -39,6 +39,8 @@ import {
   refreshCognitoAuthentication,
 } from "./aws_cognito";
 // import vi from "@/app/locales/vi";
+
+const BEDROCK_ENDPOINT = process.env.NEXT_PUBLIC_BEDROCK_ENDPOINT;
 
 export interface AWSListModelResponse {
   object: string;
@@ -127,7 +129,7 @@ export class ClaudeApi implements LLMApi {
             if (messages[i].content !== "") {
               system_prompt = messages[i].content;
             } else {
-              system_prompt = "' '";
+              system_prompt = "'.'";
             }
           }
         }
@@ -164,8 +166,6 @@ export class ClaudeApi implements LLMApi {
           new_contents.push(text_playload);
         } else {
           for (var j = 0; j < messages[i].content.length; j++) {
-
-
             if (
               (messages[i].content[j] as MultimodalContent).type === "image_url"
             ) {
@@ -273,17 +273,25 @@ export class ClaudeApi implements LLMApi {
       });
     }
 
-    console.log("messages[0].role", messages[0].role)
-
-    const requestPayload = {
+    // console.log("messages[0].role", messages[0].role)
+    const requestPayload: any = {
       ...(has_system_prompt ? { system: system_prompt } : {}),
       messages: new_messages,
       top_p: modelConfig.top_p,
       temperature: modelConfig.temperature,
       max_tokens: modelConfig.max_tokens,
       anthropic_version: model_version,
+      model: modelConfig.model
     };
-
+    console.log("modelConfig", modelConfig)
+    // check if modelConfig.model is claude-3-7-sonnet
+    if (requestPayload.model === "claude-3.7-sonnet") {
+      requestPayload.reasoning_config = modelConfig.reasoning_config
+    }
+    if (requestPayload.reasoning_config?.type === "enabled") {
+      requestPayload.top_p = undefined
+      requestPayload.temperature = 1
+    }
     return requestPayload;
   }
 
@@ -300,6 +308,12 @@ export class ClaudeApi implements LLMApi {
 
     const models = useAppConfig.getState().models;
     const accessStore = useAccessStore.getState();
+    const modelConfigsStore = useModelConfigsStore.getState();
+
+    // Get the effective region for this specific model
+    const effectiveRegion = modelConfigsStore.getEffectiveRegion(options.config.model, accessStore.awsRegion);
+    console.log("[AWS Region Debug] Model:", options.config.model, "System region:", accessStore.awsRegion, "Effective region:", effectiveRegion);
+
     let credential;
 
     // if aksk expiration then login again
@@ -364,8 +378,10 @@ export class ClaudeApi implements LLMApi {
       return;
     }
 
+    const BEDROCK_ENDPOINT = accessStore.bedrockEndpoint || process.env.NEXT_PUBLIC_BEDROCK_ENDPOINT;
+
     const aws_config_data = {
-      region: accessStore.awsRegion,
+      region: effectiveRegion, // Use model-specific region instead of system region
       credentials: {
         accessKeyId: credential
           ? credential.awsAccessKeyId
@@ -377,6 +393,7 @@ export class ClaudeApi implements LLMApi {
           ? credential.awsSessionToken
           : accessStore.awsSessionToken,
       },
+      ...(BEDROCK_ENDPOINT && { endpoint: BEDROCK_ENDPOINT }),
     };
 
     // console.log("aws_config_data", aws_config_data);
@@ -385,7 +402,6 @@ export class ClaudeApi implements LLMApi {
 
     // console.log("is vision model", visionModel);
 
-    // console.log("options.messages", options.messages);
 
     const messages = options.messages.map((v) => ({
       role: v.role,
@@ -399,14 +415,12 @@ export class ClaudeApi implements LLMApi {
     if (!modelID || !modelVersion) {
       throw new Error(`Could not find modelID or modelVersion.`);
     }
-    const requestPayload = this.convertMessagePayload(
+
+    const requestPayload: any = this.convertMessagePayload(
       messages,
       modelConfig,
       modelVersion,
     );
-
-    // console.log("requestPayload", requestPayload);
-
     // add max_tokens to vision model
     if (visionModel) {
       Object.defineProperty(requestPayload, "max_tokens", {
@@ -435,7 +449,6 @@ export class ClaudeApi implements LLMApi {
       let metrics: any = {};
 
       if (shouldStream) {
-        console.log("streaming");
         let responseText = "";
         let remainText = "";
         let finished = false;
@@ -470,9 +483,9 @@ export class ClaudeApi implements LLMApi {
         };
 
         controller.signal.onabort = finish;
-
         const payload: ConverseCommandInput = {
           modelId: modelID,
+          ...(requestPayload.system ? { system: [{ text: requestPayload.system }] } : [{ text: "." }]),
           messages: requestPayload.messages,
           inferenceConfig: {
             maxTokens: requestPayload.max_tokens,
@@ -480,19 +493,48 @@ export class ClaudeApi implements LLMApi {
             topP: requestPayload.top_p
           }
         }
+        console.log("requestPayload.model", requestPayload.model)
+        if (requestPayload.model === "claude-3.7-sonnet" && requestPayload.reasoning_config?.type === "enabled") {
+          payload.additionalModelRequestFields = { "reasoning_config": requestPayload.reasoning_config }
+        }
         const response = await client.converseStream(payload);
 
         try {
           // Send the command to the model and wait for the response
           // Extract and print the streamed response text in real-time.
-          let result = ""
+          let think_end = false;
+          let hasSeenThinking = false; // 跟踪是否已经看到过思考内容
+          
           for await (const item of response.stream ?? []) {
             if (item.contentBlockDelta) {
-              //console.log(item.contentBlockDelta.delta?.text);
-              remainText += item.contentBlockDelta.delta?.text
+              const thinkingContent = item.contentBlockDelta.delta?.reasoningContent?.text;
+              const content = item.contentBlockDelta.delta?.text;
+              
+              // 处理思考内容
+              if (thinkingContent) {
+                // 第一次出现思考内容时添加标题
+                if (!hasSeenThinking) {
+                  hasSeenThinking = true;
+                  remainText += "> **Think:**\n> ";
+                }
+                
+                // 处理思考内容并添加 > 前缀
+                const formattedThinking = thinkingContent.replace(/\n/g, '\n> ');
+                remainText += formattedThinking;
+              }
+              
+              // 处理正常内容
+              if (content) {
+                // 如果从思考内容转到正常内容，添加分隔符
+                if (hasSeenThinking && !think_end) {
+                  think_end = true;
+                  remainText += "\n\n";
+                }
+                
+                remainText += content;
+              }
             }
           }
-          console.log("result:", remainText)
           finish()
         } catch (err) {
           finish()
@@ -501,10 +543,11 @@ export class ClaudeApi implements LLMApi {
 
 
       } else {
-        console.log("not streaming");
+        // console.log("not streaming");
 
         const payload: ConverseCommandInput = {
           modelId: modelID,
+          ...(requestPayload.system ? { system: [{ text: requestPayload.system }] } : [{ text: "." }]),
           messages: requestPayload.messages,
           inferenceConfig: {
             maxTokens: requestPayload.max_tokens,

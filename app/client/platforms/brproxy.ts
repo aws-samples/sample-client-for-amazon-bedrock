@@ -114,6 +114,8 @@ export class BRProxyApi implements LLMApi {
       if (shouldStream) {
         let responseText = "";
         let remainText = "";
+        let contentStarted = false;
+        let thinkingIncluded = false;
         let finished = false;
 
         // animate response to make it looks smooth
@@ -170,6 +172,7 @@ export class BRProxyApi implements LLMApi {
               res.status !== 200
             ) {
               const responseTexts = [responseText];
+              // console.log(10, responseTexts);
               let extraInfo = await res.clone().text();
               try {
                 const resJson = await res.clone().json();
@@ -199,12 +202,26 @@ export class BRProxyApi implements LLMApi {
                 choices: Array<{
                   delta: {
                     content: string;
+                    reasoning_content: string;
                   };
                 }>;
               };
+
+              if (responseText.length === 0 && json.choices[0]?.delta?.reasoning_content) {
+                responseText += "> Think: \n> ";
+                thinkingIncluded = true;
+              }
+              if (!contentStarted && json.choices[0]?.delta?.content && thinkingIncluded) {
+                contentStarted = true;
+                remainText += "\n\n";
+              }
+              const delta_think = json.choices[0]?.delta?.reasoning_content;
               const delta = json.choices[0]?.delta?.content;
               if (delta) {
                 remainText += delta;
+              }
+              if (delta_think) {
+                remainText += delta_think.replace(/\n/g, "\n> ");
               }
             } catch (e) {
               console.error("[Request] parse error", text);
