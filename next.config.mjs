@@ -42,6 +42,10 @@ const nextConfig = {
     return config;
   },
   output: mode,
+  // The static export (Tauri / Electron / Flutter apps) has no server, and the
+  // client skips /api/config in that mode. Leave the route handlers
+  // (app/api/**/route.ts) out of it: Next 15 refuses to export them.
+  pageExtensions: mode === "export" ? ["tsx", "jsx"] : ["tsx", "ts", "jsx", "js"],
   distDir: 'out',
   assetPrefix: './', 
   images: {

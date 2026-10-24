@@ -22,8 +22,9 @@ function getModels(remoteModelRes: OpenAIListModelResponse) {
 
 async function handle(
   req: NextRequest,
-  { params }: { params: { path: string[] } },
+  props: { params: Promise<{ path: string[] }> },
 ) {
+  const params = await props.params;
   console.log("[OpenAI Route] params ", params);
 
   if (req.method === "OPTIONS") {

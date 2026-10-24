@@ -131,14 +131,13 @@ function _MarkDownContent(props: { content: string }) {
           RehypeHighlight,
           {
             detect: false,
-            ignoreMissing: true,
           },
         ],
       ]}
       components={{
-        pre: PreCode,
-        p: (pProps) => <p {...pProps} dir="auto" />,
-        a: (aProps) => {
+        pre: ({ children }) => <PreCode>{children}</PreCode>,
+        p: ({ node, ...pProps }) => <p {...pProps} dir="auto" />,
+        a: ({ node, ...aProps }) => {
           const href = aProps.href || "";
           const isInternal = /^\/#/i.test(href);
           const target = isInternal ? "_self" : aProps.target ?? "_blank";
@@ -158,7 +157,7 @@ export function Markdown(
     content: string;
     loading?: boolean;
     fontSize?: number;
-    parentRef?: RefObject<HTMLDivElement>;
+    parentRef?: RefObject<HTMLDivElement | null>;
     defaultShow?: boolean;
   } & React.DOMAttributes<HTMLDivElement>,
 ) {

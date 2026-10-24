@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 async function handle(
   req: NextRequest,
-  { params }: { params: { path: string[] } },
+  props: { params: Promise<{ path: string[] }> },
 ) {
+  const params = await props.params;
   if (req.method === "OPTIONS") {
     return NextResponse.json({ body: "OK" }, { status: 200 });
   }

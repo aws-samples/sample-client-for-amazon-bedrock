@@ -1,4 +1,5 @@
 "use client";
+import type { JSX } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import React, {
   useState,
@@ -581,7 +582,7 @@ function ChatAction(props: {
 }
 
 function useScrollToBottom(
-  scrollRef: RefObject<HTMLDivElement>,
+  scrollRef: RefObject<HTMLDivElement | null>,
   detach: boolean = false,
 ) {
   // for auto-scroll

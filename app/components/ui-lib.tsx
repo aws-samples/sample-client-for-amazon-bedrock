@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 /* eslint-disable @next/next/no-img-element */
 import styles from "./ui-lib.module.scss";
 import LoadingIcon from "../icons/three-dots.svg";
