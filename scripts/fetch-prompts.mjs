@@ -1,4 +1,3 @@
-import fetch from "node-fetch";
 import fs from "fs/promises";
 
 const RAW_FILE_URL = "https://raw.githubusercontent.com/";

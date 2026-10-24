@@ -1,5 +1,3 @@
-import webpack from "webpack";
-
 const mode = process.env.BUILD_MODE ?? "standalone";
 console.log("[Next] build mode", mode);
 
@@ -8,7 +6,9 @@ console.log("[Next] build with chunk: ", !disableChunk);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  webpack(config) {
+  // Use the webpack instance bundled with Next: plugin classes from the
+  // standalone "webpack" package do not match its compiler hooks.
+  webpack(config, { webpack }) {
     config.resolve.alias.canvas = false
     config.resolve.alias.encoding = false
     config.module.rules.push({
@@ -22,8 +22,21 @@ const nextConfig = {
       );
     }
 
+    // Newer @aws-sdk/* packages import Node built-ins with the "node:" scheme,
+    // which the webpack bundled with Next 13 cannot read. Strip the scheme so
+    // the resolve.fallback entries below apply to the browser bundle.
+    config.plugins.push(
+      new webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
+        resource.request = resource.request.replace(/^node:/, "");
+      }),
+    );
+
+    // Keep Next's own browser fallbacks and add the Node-only modules that the
+    // AWS SDK's Node credential providers reference.
     config.resolve.fallback = {
+      ...config.resolve.fallback,
       child_process: false,
+      fs: false,
     };
 
     return config;
