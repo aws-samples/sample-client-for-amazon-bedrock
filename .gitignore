@@ -65,3 +65,6 @@ SECRETS_*.md
 SECURITY_*.md
 STEP_*.md
 src-tauri/tauri.conf.json.backup
+
+# yarn.lock is the lockfile for the root project (electron-app/ keeps its own npm lock)
+/package-lock.json
