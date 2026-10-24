@@ -1,4 +1,5 @@
-FROM node:18-alpine AS base
+# Next.js 15 needs Node >= 18.18; Node 18 is end of life.
+FROM node:22-alpine AS base
 
 FROM base AS deps
 
@@ -9,7 +10,7 @@ WORKDIR /app
 COPY package.json yarn.lock ./
 
 RUN yarn config set registry 'https://registry.npmmirror.com/'
-RUN yarn install
+RUN yarn install --frozen-lockfile
 
 FROM base AS builder
 
@@ -35,10 +36,11 @@ ENV OPENAI_API_KEY=""
 ENV GOOGLE_API_KEY=""
 ENV CODE=""
 
+# next.config.mjs sets distDir to "out", so the standalone server lives in
+# out/standalone and expects its static assets under out/static.
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/.next/server ./.next/server
+COPY --from=builder /app/out/standalone ./
+COPY --from=builder /app/out/static ./out/static
 
 EXPOSE 3000
 
