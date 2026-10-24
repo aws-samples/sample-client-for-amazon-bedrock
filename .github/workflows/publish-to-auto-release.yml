@@ -185,7 +185,7 @@ jobs:
         run: yarn install
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v2
+        uses: android-actions/setup-android@v4
         with:
           sdk-platform: "android-33"
           build-tools: "33.0.1"
