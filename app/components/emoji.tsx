@@ -11,7 +11,8 @@ import BedrockBotIcon from "../icons/bedrock_16.svg";
 
 import BlackBotIcon from "../icons/black-bot.svg";
 
-export function getEmojiUrl(unified: string, style: EmojiStyle) {
+// emoji-picker-react 5 passes the style as a string value ("apple", "native", ...).
+export function getEmojiUrl(unified: string, style: `${EmojiStyle}`) {
   // Whoever owns this Content Delivery Network (CDN), I am using your CDN to serve emojis
   // Old CDN broken, so I had to switch to this one
   // Author: https://github.com/H0llyW00dzZ
