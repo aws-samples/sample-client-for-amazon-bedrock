@@ -33,7 +33,7 @@
     "@hello-pangea/dnd": "^18.0.1",
     "@next/third-parties": "^15.5.28",
     "@svgr/webpack": "^6.5.1",
-    "@vercel/analytics": "^0.1.11",
+    "@vercel/analytics": "^1.6.1",
     "@vercel/speed-insights": "^1.0.2",
     "aws-crt": "^1.18.0",
     "emoji-picker-react": "^4.5.15",
