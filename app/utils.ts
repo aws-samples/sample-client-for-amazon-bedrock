@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { showToast } from "./components/ui-lib";
 import Locale from "./locales";
 import { RequestMessage } from "./client/api";
-import { DEFAULT_MODELS } from "./constant";
+import { DEFAULT_MODELS, resolveModelName } from "./constant";
 import * as mammoth from "mammoth";
 import readXlsxFile from "read-excel-file";
 
@@ -296,7 +296,9 @@ export function getMessageImages(message: RequestMessage): string[] {
 export function isVisionModel(model: string, models?: any) {
   // First, try to find the model in the models array and check the explicit property
   if (models) {
-    const currentModel = models.find((m: any) => m.name === model);
+    const currentModel =
+      models.find((m: any) => m.name === model) ??
+      models.find((m: any) => m.name === resolveModelName(model));
     if (currentModel) {
       // Use the explicit support_image_understanding property if available
       if (currentModel.support_image_understanding !== undefined) {

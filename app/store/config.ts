@@ -5,7 +5,10 @@ import {
   DEFAULT_INPUT_TEMPLATE,
   DEFAULT_MODELS,
   DEFAULT_SIDEBAR_WIDTH,
+  LEGACY_MODEL_ALIASES,
+  REASONING_MODEL,
   StoreKey,
+  resolveModelName,
 } from "../constant";
 import { createPersistStore } from "../utils/store";
 
@@ -47,7 +50,7 @@ export const DEFAULT_CONFIG = {
   models: DEFAULT_MODELS as any as LLMModel[],
 
   modelConfig: {
-    model: "claude-3-sonnet" as ModelType,
+    model: "claude-sonnet-4.6" as ModelType,
     temperature: 0.5,
     top_p: 1,
     max_tokens: 4000,
@@ -59,8 +62,10 @@ export const DEFAULT_CONFIG = {
     enableInjectSystemPrompts: true,
     template: DEFAULT_INPUT_TEMPLATE,
     support_streaming: true,
+    // Extended thinking is opt-in (checkbox in the chat header): it is slower,
+    // costs more, and forces temperature to 1.
     reasoning_config: {
-      type: "enabled",
+      type: "disabled",
       budget_tokens: 1024,
     },
   },
@@ -107,7 +112,7 @@ export const ModalConfigValidator = {
   },
   reasoning_config(x: any, model: string) {
     console.log("reasoning_config", x, model);
-    if (model !== "claude-3.7-sonnet") {
+    if (!REASONING_MODEL.includes(resolveModelName(model))) {
       return undefined;
     }
     return x;
@@ -148,7 +153,7 @@ export const useAppConfig = createPersistStore(
   }),
   {
     name: StoreKey.Config,
-    version: 4.0,
+    version: 4.1,
     migrate(persistedState, version) {
       const state = persistedState as ChatConfig;
 
@@ -193,6 +198,32 @@ export const useAppConfig = createPersistStore(
         if (state.modelConfig.support_streaming === false) {
           state.modelConfig.support_streaming = true;
         }
+      }
+
+      if (version < 4.1) {
+        // The built-in Claude 3 / 3.7 models reached end of life on Bedrock:
+        // point saved settings at their replacements and refresh the list.
+        if (
+          state.modelConfig?.reasoning_config &&
+          (state.modelConfig.model as string) !== "claude-3.7-sonnet"
+        ) {
+          // Keep thinking off for users who were not on the reasoning model.
+          state.modelConfig.reasoning_config.type = "disabled";
+        }
+        if (state.modelConfig?.model) {
+          state.modelConfig.model = resolveModelName(
+            state.modelConfig.model,
+          ) as ModelType;
+        }
+        const legacy = new Set(Object.keys(LEGACY_MODEL_ALIASES));
+        const kept = (state.models ?? []).filter((m) => !legacy.has(m.name));
+        const keptNames = new Set(kept.map((m) => m.name));
+        state.models = [
+          ...(DEFAULT_MODELS as any as LLMModel[]).filter(
+            (m) => !keptNames.has(m.name),
+          ),
+          ...kept,
+        ];
       }
 
       return state as any;

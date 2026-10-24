@@ -11,15 +11,12 @@ import { IconButton } from "./button";
 import ResetIcon from "../icons/reload.svg";
 import UploadIcon from "../icons/upload.svg";
 import { LLMModel } from "../client/api";
-import { DEFAULT_MODELS } from "@/app/constant";
+import { DEFAULT_MODELS, REASONING_MODEL } from "@/app/constant";
 import { ModelDropdown } from "./model-dropdown";
 
 // 每个模型的特定配置定义
-const MODEL_SPECIFIC_CONFIGS = {
-  "claude-3.7-sonnet": {
-    hasReasoning: true,
-  },
-};
+const MODEL_SPECIFIC_CONFIGS: Record<string, { hasReasoning: boolean }> =
+  Object.fromEntries(REASONING_MODEL.map((name) => [name, { hasReasoning: true }]));
 
 // 默认配置
 const DEFAULT_MODEL_CONFIG = {

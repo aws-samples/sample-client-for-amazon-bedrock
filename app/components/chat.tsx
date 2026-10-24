@@ -101,6 +101,7 @@ import {
   Path,
   REASONING_MODEL,
   REQUEST_TIMEOUT_MS,
+  resolveModelName,
   UNFINISHED_INPUT,
 } from "../constant";
 import { Avatar } from "./emoji";
@@ -1455,7 +1456,7 @@ function _Chat() {
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: "10px" }}>
             <span>{session.mask.modelConfig?.model ?? ""}</span>
-            {REASONING_MODEL.includes(session.mask.modelConfig?.model ?? "")&&
+            {REASONING_MODEL.includes(resolveModelName(session.mask.modelConfig?.model ?? ""))&&
             <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <input 
                 type="checkbox"
