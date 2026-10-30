@@ -427,9 +427,17 @@ export class ClaudeApi implements LLMApi {
       throw new Error(`Could not find modelID for model ${modelConfig.model}.`);
     }
 
-    // Claude 4 and later on Bedrock reject temperature and top_p together.
-    const omitTopP =
-      /anthropic\.claude/.test(modelID) && !/claude-3/.test(modelID);
+    // Sampling params by Claude generation: Claude 4.x rejects temperature
+    // and top_p together; Claude 5.x deprecates temperature (and top_p)
+    // entirely and errors when either is sent. Ids look like
+    // "anthropic.claude-sonnet-5-5" or "anthropic.claude-3-haiku-...", so
+    // the first number after the optional family word is the major version.
+    const claudeMajorMatch = modelID.match(
+      /anthropic\.claude-(?:(?:opus|sonnet|haiku|fable|instant)-)?(\d+)/,
+    );
+    const claudeMajor = claudeMajorMatch ? parseInt(claudeMajorMatch[1]) : 0;
+    const omitTopP = claudeMajor >= 4;
+    const omitTemperature = claudeMajor >= 5;
 
     const requestPayload: any = this.convertMessagePayload(
       messages,
@@ -504,7 +512,7 @@ export class ClaudeApi implements LLMApi {
           messages: requestPayload.messages,
           inferenceConfig: {
             maxTokens: requestPayload.max_tokens,
-            temperature: requestPayload.temperature,
+            temperature: omitTemperature ? undefined : requestPayload.temperature,
             topP: omitTopP ? undefined : requestPayload.top_p,
           }
         }
@@ -566,7 +574,7 @@ export class ClaudeApi implements LLMApi {
           messages: requestPayload.messages,
           inferenceConfig: {
             maxTokens: requestPayload.max_tokens,
-            temperature: requestPayload.temperature,
+            temperature: omitTemperature ? undefined : requestPayload.temperature,
             topP: omitTopP ? undefined : requestPayload.top_p,
           }
         }
