@@ -210,7 +210,9 @@ const createIDBStorage = () => {
           sessions = [createEmptySession()]
         }
         const result = { state: { sessions, currentSessionIndex, lastUpdateTime }, version }
-        console.log('result:', result)
+        // Do not log the full result: with a large history it retains the
+        // whole store in the console and slows startup.
+        console.log('[ChatStore] hydrated sessions:', sessions.length, 'version:', version)
         return result
 
       } else {
@@ -984,15 +986,18 @@ export const useChatStore = createPersistStore(
     name: StoreKey.Chat,
     version: CURRENT_STORAGE_VERSION,
     migrate(persistedState, version) {
+      // persistedState is freshly parsed from storage, so it is safe to
+      // mutate in place. Deep-cloning it here (JSON.parse(JSON.stringify()))
+      // froze the app for minutes on real-world stores: with years of chat
+      // history (images are stored as base64 in messages) the clone ran at
+      // 100% CPU and gigabytes of memory while the window stayed blank.
       const state = persistedState as any;
-      const newState = JSON.parse(
-        JSON.stringify(state),
-      ) as typeof DEFAULT_CHAT_STATE;
+      const newState = state as typeof DEFAULT_CHAT_STATE;
 
       if (version < 2) {
+        const oldSessions = state.sessions ?? [];
         newState.sessions = [];
 
-        const oldSessions = state.sessions;
         for (const oldSession of oldSessions) {
           const newSession = createEmptySession();
           newSession.topic = oldSession.topic;
