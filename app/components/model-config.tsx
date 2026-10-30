@@ -5,7 +5,7 @@ import { getServerSideConfig } from "../config/server";
 import { useEffect, useState, useRef } from "react";
 import Locale from "../locales";
 import { InputRange } from "./input-range";
-import { ListItem, Select } from "./ui-lib";
+import { ListItem, Select, showToast } from "./ui-lib";
 // import { useAllModels } from "../utils/hooks";
 import { IconButton } from "./button";
 import ResetIcon from "../icons/reload.svg";
@@ -13,6 +13,7 @@ import UploadIcon from "../icons/upload.svg";
 import { LLMModel } from "../client/api";
 import { DEFAULT_MODELS, REASONING_MODEL } from "@/app/constant";
 import { ModelDropdown } from "./model-dropdown";
+import { discoverBedrockModels } from "../client/platforms/aws_models";
 
 // 每个模型的特定配置定义
 const MODEL_SPECIFIC_CONFIGS: Record<string, { hasReasoning: boolean }> =
@@ -207,35 +208,47 @@ export function ModelConfigList(props: {
             <IconButton
               onClick={async () => {
                 try {
-                  const http_headers: any = {
-                  };
-                  let model_url = "https://www.agentnumber47.com/bedrock/bedrock-models.json";
                   if (provider === "AWS" && useBRProxy === "True") {
-                    http_headers["Authorization"] = `Bearer ${openaiApiKey}`;
-                    model_url = BRProxyUrl + "/user/model/list-for-brclient?f=";
+                    const response = await fetch(
+                      BRProxyUrl +
+                        "/user/model/list-for-brclient?f=" +
+                        new Date().getTime().toString(),
+                      {
+                        method: "GET",
+                        headers: { Authorization: `Bearer ${openaiApiKey}` },
+                      },
+                    );
+                    const remote_models = (await response.json()).data;
+                    appConfig.update(
+                      (config) =>
+                        (config.models = remote_models as any as LLMModel[]),
+                    );
+                    return;
                   }
 
-                  const response = await fetch(
-                    model_url + "?f=" + new Date().getTime().toString(),
-                    {
-                      method: 'GET',
-                      headers: http_headers,
-                    },
-                  );
-                  let remote_models = await response.json();
-                  if (provider === "AWS" && useBRProxy === "True") {
-                    remote_models = remote_models.data;
+                  // Query the Bedrock control plane in the configured region.
+                  const discovered = await discoverBedrockModels();
+                  if (discovered.length === 0) {
+                    showToast(
+                      "No models discovered. Set AWS region and credentials in Settings first.",
+                    );
+                    return;
                   }
-                  appConfig.update(
-                    (config) =>
-                      (config.models = remote_models as any as LLMModel[]),
+                  appConfig.mergeModels(discovered);
+                  showToast(
+                    `Discovered ${discovered.length} models from Bedrock (${accessStore.awsRegion})`,
                   );
-                } catch (e) {
-                  console.error(e);
+                } catch (e: any) {
+                  console.error("[Model Discovery] failed", e);
+                  showToast(
+                    e?.name === "AccessDeniedException"
+                      ? "Model discovery failed: credentials lack bedrock:ListFoundationModels / bedrock:ListInferenceProfiles"
+                      : `Model discovery failed: ${e?.message ?? e}`,
+                  );
                 }
               }}
               icon={<ResetIcon />}
-              title="Refresh models from remote"
+              title="Discover available models from Bedrock"
             />
 
             <input

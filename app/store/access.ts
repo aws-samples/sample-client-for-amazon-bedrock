@@ -32,6 +32,11 @@ const DEFAULT_ACCESS_STATE = {
   awsCognitoUser: false,
   BRProxyUrl: "",
   bedrockEndpoint: "",
+  // Desktop only: when set, credentials were resolved from this ~/.aws
+  // profile and are re-resolved near awsProfileCredsExpiration (epoch ms,
+  // 0 for static keys).
+  awsProfile: "",
+  awsProfileCredsExpiration: 0,
 
   // openai
   openaiUrl: DEFAULT_OPENAI_URL,

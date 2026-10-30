@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { useDebounce } from "use-debounce";
 
 import styles from "./settings.module.scss";
 
@@ -31,6 +32,13 @@ import {
   showToast,
 } from "./ui-lib";
 import { ModelConfigList } from "./model-config";
+import { discoverBedrockModels } from "../client/platforms/aws_models";
+import {
+  supportsLocalAwsProfiles,
+  listLocalAwsProfiles,
+  applyLocalAwsProfile,
+  clearLocalAwsProfile,
+} from "../client/platforms/aws_profile";
 
 import { IconButton } from "./button";
 import {
@@ -583,6 +591,48 @@ export function Settings() {
   }
 
   const accessStore = useAccessStore();
+
+  // Local ~/.aws profiles (desktop app only; empty elsewhere).
+  const [localAwsProfiles, setLocalAwsProfiles] = useState<string[]>([]);
+  useEffect(() => {
+    if (supportsLocalAwsProfiles()) {
+      listLocalAwsProfiles()
+        .then(setLocalAwsProfiles)
+        .catch((e) => console.log("[AWS Profile] failed to list profiles", e));
+    }
+  }, []);
+
+  // Re-discover the Bedrock model list when credentials or region change.
+  // Debounced because these values update on every keystroke; the initial
+  // value is skipped since startup discovery already runs in useLoadData().
+  const awsCredentialsKey = [
+    accessStore.awsRegion,
+    accessStore.awsAccessKeyId,
+    accessStore.awsSecretAccessKey,
+  ].join("\u0000");
+  const [debouncedCredentialsKey] = useDebounce(awsCredentialsKey, 1500);
+  const lastDiscoveryKey = useRef(awsCredentialsKey);
+  useEffect(() => {
+    if (lastDiscoveryKey.current === debouncedCredentialsKey) return;
+    lastDiscoveryKey.current = debouncedCredentialsKey;
+    if (accessStore.useBRProxy === "True") return;
+    discoverBedrockModels()
+      .then((models) => {
+        if (models.length > 0) {
+          config.mergeModels(models);
+          showToast(
+            `Discovered ${models.length} models from Bedrock (${
+              useAccessStore.getState().awsRegion
+            })`,
+          );
+        }
+      })
+      .catch((e) =>
+        console.log("[Model Discovery] skipped after credential change", e),
+      );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedCredentialsKey]);
+
   const shouldHideBalanceQuery = useMemo(() => {
     const isOpenAiUrl = accessStore.openaiUrl.includes(OPENAI_BASE_URL);
 
@@ -1042,6 +1092,43 @@ export function Settings() {
                               }
                             ></input>
                           </ListItem>
+                          {supportsLocalAwsProfiles() && (
+                            <ListItem
+                              title="Local AWS Profile"
+                              subTitle="Fill credentials from a ~/.aws profile (desktop only; SSO and assume-role profiles are resolved and auto-refreshed)"
+                            >
+                              <Select
+                                value={accessStore.awsProfile}
+                                onChange={async (e) => {
+                                  const profile = e.currentTarget.value;
+                                  if (!profile) {
+                                    clearLocalAwsProfile();
+                                    return;
+                                  }
+                                  try {
+                                    await applyLocalAwsProfile(profile);
+                                    showToast(
+                                      `Loaded credentials from profile "${profile}"`,
+                                    );
+                                  } catch (err: any) {
+                                    clearLocalAwsProfile();
+                                    showToast(
+                                      `Failed to resolve profile "${profile}": ${
+                                        err?.message ?? err
+                                      }`,
+                                    );
+                                  }
+                                }}
+                              >
+                                <option value="">Manual keys</option>
+                                {localAwsProfiles.map((p) => (
+                                  <option key={p} value={p}>
+                                    {p}
+                                  </option>
+                                ))}
+                              </Select>
+                            </ListItem>
+                          )}
                           <ListItem
                             title={Locale.Settings.Access.AWS.Region.Title}
                             subTitle={
@@ -1075,11 +1162,13 @@ export function Settings() {
                                 Locale.Settings.Access.AWS.AccessKey.Placeholder
                               }
                               onChange={(e) => {
-                                accessStore.update(
-                                  (access) =>
-                                  (access.awsAccessKeyId =
-                                    e.currentTarget.value),
-                                );
+                                accessStore.update((access) => {
+                                  access.awsAccessKeyId =
+                                    e.currentTarget.value;
+                                  // Typing keys manually leaves profile mode.
+                                  access.awsProfile = "";
+                                  access.awsProfileCredsExpiration = 0;
+                                });
                               }}
                             />
                           </ListItem>
@@ -1096,11 +1185,13 @@ export function Settings() {
                                 Locale.Settings.Access.AWS.SecretKey.Placeholder
                               }
                               onChange={(e) => {
-                                accessStore.update(
-                                  (access) =>
-                                  (access.awsSecretAccessKey =
-                                    e.currentTarget.value),
-                                );
+                                accessStore.update((access) => {
+                                  access.awsSecretAccessKey =
+                                    e.currentTarget.value;
+                                  // Typing keys manually leaves profile mode.
+                                  access.awsProfile = "";
+                                  access.awsProfileCredsExpiration = 0;
+                                });
                               }}
                             />
                           </ListItem>
