@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { useDebounce } from "use-debounce";
 
 import styles from "./settings.module.scss";
 
@@ -31,6 +32,7 @@ import {
   showToast,
 } from "./ui-lib";
 import { ModelConfigList } from "./model-config";
+import { discoverBedrockModels } from "../client/platforms/aws_models";
 
 import { IconButton } from "./button";
 import {
@@ -583,6 +585,38 @@ export function Settings() {
   }
 
   const accessStore = useAccessStore();
+
+  // Re-discover the Bedrock model list when credentials or region change.
+  // Debounced because these values update on every keystroke; the initial
+  // value is skipped since startup discovery already runs in useLoadData().
+  const awsCredentialsKey = [
+    accessStore.awsRegion,
+    accessStore.awsAccessKeyId,
+    accessStore.awsSecretAccessKey,
+  ].join("\u0000");
+  const [debouncedCredentialsKey] = useDebounce(awsCredentialsKey, 1500);
+  const lastDiscoveryKey = useRef(awsCredentialsKey);
+  useEffect(() => {
+    if (lastDiscoveryKey.current === debouncedCredentialsKey) return;
+    lastDiscoveryKey.current = debouncedCredentialsKey;
+    if (accessStore.useBRProxy === "True") return;
+    discoverBedrockModels()
+      .then((models) => {
+        if (models.length > 0) {
+          config.mergeModels(models);
+          showToast(
+            `Discovered ${models.length} models from Bedrock (${
+              useAccessStore.getState().awsRegion
+            })`,
+          );
+        }
+      })
+      .catch((e) =>
+        console.log("[Model Discovery] skipped after credential change", e),
+      );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedCredentialsKey]);
+
   const shouldHideBalanceQuery = useMemo(() => {
     const isOpenAiUrl = accessStore.openaiUrl.includes(OPENAI_BASE_URL);
 

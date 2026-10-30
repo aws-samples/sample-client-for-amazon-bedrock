@@ -91,11 +91,24 @@ To get started with BRClient, you must create an IAM user and generate Access Ke
             "bedrock:InvokeModel",
             "bedrock:InvokeModelWithResponseStream"
         ],
-        "Resource": "arn:aws:bedrock:*::foundation-model/*"
+        "Resource": [
+            "arn:aws:bedrock:*::foundation-model/*",
+            "arn:aws:bedrock:*:*:inference-profile/*"
+        ]
+        },
+        {
+        "Sid": "ModelDiscovery4BRClient",
+        "Effect": "Allow",
+        "Action": [
+            "bedrock:ListFoundationModels",
+            "bedrock:ListInferenceProfiles"
+        ],
+        "Resource": "*"
         }
     ]
     }
     ```
+  - The `inference-profile` resource is required because newer models (including the built-in defaults) are invoked through cross-region inference profiles. The `List*` actions power the model discovery feature (the refresh button in Settings → Model Configuration); without them the client falls back to its built-in model list.
 
 For more details about Amazon Bedrock identity-based policy, please visit [Link](https://docs.aws.amazon.com/bedrock/latest/userguide/security_iam_id-based-policy-examples.html)
 

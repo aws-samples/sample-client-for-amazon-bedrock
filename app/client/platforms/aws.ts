@@ -39,6 +39,7 @@ import {
   getCognitoRefreshToken,
   refreshCognitoAuthentication,
 } from "./aws_cognito";
+import { discoverBedrockModels } from "./aws_models";
 // import vi from "@/app/locales/vi";
 
 const BEDROCK_ENDPOINT = process.env.NEXT_PUBLIC_BEDROCK_ENDPOINT;
@@ -418,10 +419,12 @@ export class ClaudeApi implements LLMApi {
       models.find((v) => v.name === modelConfig.model) ??
       models.find((v) => v.name === resolveModelName(modelConfig.model));
     const modelID = currentModel?.modelId; // this.get_model_id(modelConfig.model);
-    const modelVersion = currentModel?.anthropic_version; // this.get_model_version(modelConfig.model);
+    // anthropic_version only exists for Anthropic models; the Converse API
+    // does not need it, so discovered non-Anthropic models leave it empty.
+    const modelVersion = currentModel?.anthropic_version ?? "";
 
-    if (!modelID || !modelVersion) {
-      throw new Error(`Could not find modelID or modelVersion.`);
+    if (!modelID) {
+      throw new Error(`Could not find modelID for model ${modelConfig.model}.`);
     }
 
     // Claude 4 and later on Bedrock reject temperature and top_p together.
@@ -595,8 +598,15 @@ export class ClaudeApi implements LLMApi {
   }
 
   async models(): Promise<LLMModel[]> {
-    // as we only support Claude 3 mode at present, so we are returning a dummy model list data
-    return [];
+    // Discover the invocable Converse models from the Bedrock control plane.
+    // Returning [] keeps the built-in DEFAULT_MODELS as the fallback
+    // (mergeModels ignores empty lists).
+    try {
+      return await discoverBedrockModels();
+    } catch (e) {
+      console.error("[Bedrock] model discovery failed, keeping current model list", e);
+      return [];
+    }
   }
 }
 // export { OpenaiPath };
