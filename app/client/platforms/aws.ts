@@ -40,6 +40,7 @@ import {
   refreshCognitoAuthentication,
 } from "./aws_cognito";
 import { discoverBedrockModels } from "./aws_models";
+import { ensureLocalAwsProfileCredentials } from "./aws_profile";
 // import vi from "@/app/locales/vi";
 
 const BEDROCK_ENDPOINT = process.env.NEXT_PUBLIC_BEDROCK_ENDPOINT;
@@ -312,6 +313,21 @@ export class ClaudeApi implements LLMApi {
         model: options.config.model,
       },
     };
+
+    // Credentials from a local AWS profile (desktop) may expire; refresh
+    // them before taking the access-store snapshot below.
+    try {
+      await ensureLocalAwsProfileCredentials();
+    } catch (e: any) {
+      options.onError?.(
+        new Error(
+          `Failed to refresh credentials from the local AWS profile: ${
+            e?.message ?? e
+          }`,
+        ),
+      );
+      return;
+    }
 
     const models = useAppConfig.getState().models;
     const accessStore = useAccessStore.getState();

@@ -10,6 +10,7 @@ import {
 import { useAccessStore } from "@/app/store";
 import { DEFAULT_MODELS } from "@/app/constant";
 import { LLMModel } from "../api";
+import { ensureLocalAwsProfileCredentials } from "./aws_profile";
 
 const ANTHROPIC_VERSION = "bedrock-2023-05-31";
 
@@ -70,6 +71,9 @@ function pickInvocationId(
  * surface them.
  */
 export async function discoverBedrockModels(): Promise<LLMModel[]> {
+  // Refresh expiring local-profile credentials (desktop) before use.
+  await ensureLocalAwsProfileCredentials();
+
   const accessStore = useAccessStore.getState();
 
   if (
