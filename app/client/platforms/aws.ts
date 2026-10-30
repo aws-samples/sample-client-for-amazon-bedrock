@@ -45,6 +45,36 @@ import { ensureLocalAwsProfileCredentials } from "./aws_profile";
 
 const BEDROCK_ENDPOINT = process.env.NEXT_PUBLIC_BEDROCK_ENDPOINT;
 
+// Sampling params a model rejected at runtime ("`temperature` is deprecated
+// for this model", "This model doesn't support the temperature field", ...).
+// Providers deprecate params at their own pace (Claude 5.x, GPT-6 Astra, ...),
+// so instead of hardcoding every model we retry once without the rejected
+// param and remember it per model for the rest of the session.
+const runtimeUnsupportedSamplingParams = new Map<string, Set<string>>();
+
+function rememberUnsupportedSamplingParam(modelId: string, param: string) {
+  const params =
+    runtimeUnsupportedSamplingParams.get(modelId) ?? new Set<string>();
+  params.add(param);
+  runtimeUnsupportedSamplingParams.set(modelId, params);
+}
+
+function detectUnsupportedSamplingParam(
+  err: unknown,
+): "temperature" | "topP" | null {
+  const message = String((err as any)?.message ?? err ?? "");
+  if (
+    !/(doesn'?t support|does not support|deprecated|not supported|unsupported|remove)/i.test(
+      message,
+    )
+  ) {
+    return null;
+  }
+  if (/temperature/i.test(message)) return "temperature";
+  if (/top_?p/i.test(message)) return "topP";
+  return null;
+}
+
 export interface AWSListModelResponse {
   object: string;
   data: Array<{
@@ -443,17 +473,21 @@ export class ClaudeApi implements LLMApi {
       throw new Error(`Could not find modelID for model ${modelConfig.model}.`);
     }
 
-    // Sampling params by Claude generation: Claude 4.x rejects temperature
-    // and top_p together; Claude 5.x deprecates temperature (and top_p)
-    // entirely and errors when either is sent. Ids look like
-    // "anthropic.claude-sonnet-5-5" or "anthropic.claude-3-haiku-...", so
-    // the first number after the optional family word is the major version.
+    // Sampling params this model is known to reject. Seeded with the Claude
+    // generation rules (4.x rejects temperature and top_p together; 5.x
+    // deprecates both), plus whatever this model rejected at runtime earlier
+    // in the session. Ids look like "anthropic.claude-sonnet-5-5" or
+    // "anthropic.claude-3-haiku-...", so the first number after the optional
+    // family word is the major version.
     const claudeMajorMatch = modelID.match(
       /anthropic\.claude-(?:(?:opus|sonnet|haiku|fable|instant)-)?(\d+)/,
     );
     const claudeMajor = claudeMajorMatch ? parseInt(claudeMajorMatch[1]) : 0;
-    const omitTopP = claudeMajor >= 4;
-    const omitTemperature = claudeMajor >= 5;
+    const omittedSamplingParams = new Set<string>(
+      runtimeUnsupportedSamplingParams.get(modelID) ?? [],
+    );
+    if (claudeMajor >= 4) omittedSamplingParams.add("topP");
+    if (claudeMajor >= 5) omittedSamplingParams.add("temperature");
 
     const requestPayload: any = this.convertMessagePayload(
       messages,
@@ -471,6 +505,38 @@ export class ClaudeApi implements LLMApi {
     }
 
     // console.log("[Request] claude payload: ", requestPayload);
+
+    const buildInferenceConfig = () => ({
+      maxTokens: requestPayload.max_tokens,
+      temperature: omittedSamplingParams.has("temperature")
+        ? undefined
+        : requestPayload.temperature,
+      topP: omittedSamplingParams.has("topP")
+        ? undefined
+        : requestPayload.top_p,
+    });
+
+    // Send, and when the model rejects a sampling param it was given, drop
+    // that param, remember it for this model, and retry.
+    const converseWithParamRetry = async <T>(
+      send: () => Promise<T>,
+    ): Promise<T> => {
+      for (let attempt = 0; ; attempt++) {
+        try {
+          return await send();
+        } catch (err) {
+          const param = detectUnsupportedSamplingParam(err);
+          if (!param || omittedSamplingParams.has(param) || attempt >= 2) {
+            throw err;
+          }
+          console.log(
+            `[Bedrock] model ${modelID} rejected '${param}', retrying without it`,
+          );
+          omittedSamplingParams.add(param);
+          rememberUnsupportedSamplingParam(modelID, param);
+        }
+      }
+    };
 
     const shouldStream = !!options.config.stream;
     const controller = new AbortController();
@@ -526,17 +592,16 @@ export class ClaudeApi implements LLMApi {
           modelId: modelID,
           ...(requestPayload.system ? { system: [{ text: requestPayload.system }] } : [{ text: "." }]),
           messages: requestPayload.messages,
-          inferenceConfig: {
-            maxTokens: requestPayload.max_tokens,
-            temperature: omitTemperature ? undefined : requestPayload.temperature,
-            topP: omitTopP ? undefined : requestPayload.top_p,
-          }
+          inferenceConfig: buildInferenceConfig(),
         }
         console.log("requestPayload.model", requestPayload.model)
         if (REASONING_MODEL.includes(resolveModelName(requestPayload.model)) && requestPayload.reasoning_config?.type === "enabled") {
           payload.additionalModelRequestFields = { "reasoning_config": requestPayload.reasoning_config }
         }
-        const response = await client.converseStream(payload);
+        const response = await converseWithParamRetry(() => {
+          payload.inferenceConfig = buildInferenceConfig();
+          return client.converseStream(payload);
+        });
 
         try {
           // Send the command to the model and wait for the response
@@ -588,14 +653,13 @@ export class ClaudeApi implements LLMApi {
           modelId: modelID,
           ...(requestPayload.system ? { system: [{ text: requestPayload.system }] } : [{ text: "." }]),
           messages: requestPayload.messages,
-          inferenceConfig: {
-            maxTokens: requestPayload.max_tokens,
-            temperature: omitTemperature ? undefined : requestPayload.temperature,
-            topP: omitTopP ? undefined : requestPayload.top_p,
-          }
+          inferenceConfig: buildInferenceConfig(),
         }
 
-        const res = await client.converseModel(payload)
+        const res = await converseWithParamRetry(() => {
+          payload.inferenceConfig = buildInferenceConfig();
+          return client.converseModel(payload);
+        })
         clearTimeout(requestTimeoutId);
 
         let message = "No message return";
