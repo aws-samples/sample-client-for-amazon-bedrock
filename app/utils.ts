@@ -216,29 +216,33 @@ function openInNewTabs([image, ...rest]: MarkdownImage[]) {
 }
 
 export async function downloadImages(images: MarkdownImage[]) {
+  const blocked: MarkdownImage[] = [];
   let written = false;
+  let expired = false;
   let failed = false;
-  for (let i = 0; i < images.length; i++) {
-    switch (await saveImage(images[i])) {
+  for (const image of images) {
+    switch (await saveImage(image)) {
       case "downloaded":
         break;
       case "written":
         written = true;
+        break;
+      case "blocked":
+        blocked.push(image);
+        break;
+      case "expired":
+        expired = true;
         break;
       case "failed":
         failed = true;
         break;
       case "cancelled":
         return;
-      case "blocked":
-        openInNewTabs(images.slice(i));
-        return;
-      case "expired":
-        showToast(Locale.Download.ImageExpired);
-        return;
     }
   }
-  if (failed) showToast(Locale.Download.Failed);
+  if (blocked.length > 0) openInNewTabs(blocked);
+  else if (expired) showToast(Locale.Download.ImageExpired);
+  else if (failed) showToast(Locale.Download.Failed);
   else if (written) showToast(Locale.Download.Success);
 }
 
