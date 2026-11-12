@@ -42,6 +42,7 @@ const cn = {
       PinToastAction: "查看",
       Delete: "删除",
       Edit: "编辑",
+      Download: "下载",
     },
     Commands: {
       new: "新建聊天",
@@ -434,6 +435,9 @@ const cn = {
   Download: {
     Success: "内容已下载到您的目录。",
     Failed: "下载失败。",
+    ImageOpened: "无法直接保存图片，已在新标签页中打开。",
+    ImageExpired: "图片链接已过期，请重新生成图片后再下载。",
+    OpenNextImage: (count: number) => `打开下一张（还剩 ${count} 张）`,
   },
   Context: {
     Toast: (x: any) => `包含 ${x} 条预设提示词`,

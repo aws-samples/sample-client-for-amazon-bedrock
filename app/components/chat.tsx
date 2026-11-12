@@ -23,6 +23,7 @@ import RenameIcon from "../icons/rename.svg";
 import ExportIcon from "../icons/share.svg";
 import ReturnIcon from "../icons/return.svg";
 import CopyIcon from "../icons/copy.svg";
+import DownloadIcon from "../icons/download.svg";
 import LoadingIcon from "../icons/three-dots.svg";
 import LoadingButtonIcon from "../icons/loading.svg";
 import PromptIcon from "../icons/prompt.svg";
@@ -69,6 +70,8 @@ import {
   useMobileScreen,
   getMessageTextContent,
   getMessageImages,
+  getMarkdownImages,
+  downloadImages,
   isVisionModel,
   compressImage,
   extractTextFromDocx,
@@ -1540,6 +1543,9 @@ function _Chat() {
             !(message.preview || message.content.length === 0) &&
             !isContext;
           const showTyping = message.preview || message.streaming;
+          const markdownImages = getMarkdownImages(
+            getMessageTextContent(message),
+          );
 
           const shouldShowClearContextDivider = i === clearContextIndex - 1;
 
@@ -1655,6 +1661,13 @@ function _Chat() {
                                   )
                                 }
                               />
+                              {markdownImages.length > 0 && (
+                                <ChatAction
+                                  text={Locale.Chat.Actions.Download}
+                                  icon={<DownloadIcon />}
+                                  onClick={() => downloadImages(markdownImages)}
+                                />
+                              )}
                             </>
                           )}
                         </div>
