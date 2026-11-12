@@ -223,6 +223,7 @@ export async function downloadImages(images: MarkdownImage[]) {
   // Toasts all render in the same spot, so one toast reports every problem.
   const notes = new Set<string>();
   let written = false;
+  let cancelled = false;
   for (const image of images) {
     switch (await saveImage(image)) {
       case "downloaded":
@@ -240,12 +241,14 @@ export async function downloadImages(images: MarkdownImage[]) {
         notes.add(Locale.Download.Failed);
         break;
       case "cancelled":
-        return;
+        cancelled = true;
+        break;
     }
+    if (cancelled) break;
   }
   if (blocked.length > 0) openInNewTabs(blocked, notes);
   else if (notes.size > 0) showToast(Array.from(notes).join(" "));
-  else if (written) showToast(Locale.Download.Success);
+  else if (written && !cancelled) showToast(Locale.Download.Success);
 }
 
 export function compressImage(file: File, maxSize: number): Promise<string> {
