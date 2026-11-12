@@ -198,13 +198,16 @@ async function saveImage(image: MarkdownImage): Promise<ImageSaveResult> {
 
 // One click lets the page open one popup, so each further tab opens from a
 // click on the toast.
-function openInNewTabs([image, ...rest]: MarkdownImage[]) {
+function openInNewTabs(
+  [image, ...rest]: MarkdownImage[],
+  notes = new Set<string>(),
+) {
   if (!window.open(image.url, "_blank")) {
-    showToast(Locale.Download.Failed);
+    showToast(Array.from(notes.add(Locale.Download.Failed)).join(" "));
     return;
   }
   showToast(
-    Locale.Download.ImageOpened,
+    [Locale.Download.ImageOpened, ...Array.from(notes)].join(" "),
     rest.length > 0
       ? {
           text: Locale.Download.OpenNextImage(rest.length),
@@ -217,9 +220,9 @@ function openInNewTabs([image, ...rest]: MarkdownImage[]) {
 
 export async function downloadImages(images: MarkdownImage[]) {
   const blocked: MarkdownImage[] = [];
+  // Toasts all render in the same spot, so one toast reports every problem.
+  const notes = new Set<string>();
   let written = false;
-  let expired = false;
-  let failed = false;
   for (const image of images) {
     switch (await saveImage(image)) {
       case "downloaded":
@@ -231,18 +234,17 @@ export async function downloadImages(images: MarkdownImage[]) {
         blocked.push(image);
         break;
       case "expired":
-        expired = true;
+        notes.add(Locale.Download.ImageExpired);
         break;
       case "failed":
-        failed = true;
+        notes.add(Locale.Download.Failed);
         break;
       case "cancelled":
         return;
     }
   }
-  if (blocked.length > 0) openInNewTabs(blocked);
-  else if (expired) showToast(Locale.Download.ImageExpired);
-  else if (failed) showToast(Locale.Download.Failed);
+  if (blocked.length > 0) openInNewTabs(blocked, notes);
+  else if (notes.size > 0) showToast(Array.from(notes).join(" "));
   else if (written) showToast(Locale.Download.Success);
 }
 

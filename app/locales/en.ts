@@ -441,8 +441,9 @@ const en: LocaleType = {
   Download: {
     Success: "Content downloaded to your directory.",
     Failed: "Download failed.",
-    ImageOpened: "Couldn't save the image directly, so it opened in a new tab.",
-    ImageExpired: "The image link has expired. Regenerate the image to download it.",
+    ImageOpened: "Couldn't save an image directly, so it opened in a new tab.",
+    ImageExpired:
+      "An image link has expired. Regenerate the image to download it.",
     OpenNextImage: (count: number) => `Open next (${count} left)`,
   },
   Context: {
