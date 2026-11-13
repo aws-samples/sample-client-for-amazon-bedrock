@@ -87,6 +87,170 @@ export async function downloadAs(text: string, filename: string) {
   }
 }
 
+export type MarkdownImage = { alt: string; url: string };
+
+type ImageSaveResult =
+  "downloaded" | "written" | "cancelled" | "blocked" | "expired" | "failed";
+
+export function getMarkdownImages(text: string): MarkdownImage[] {
+  const withoutCode = text.replace(/(```|~~~)[\s\S]*?\1|`[^`\n]*`/g, "");
+  const pattern =
+    /!\[([^\]]*)\]\(\s*(?:<([^>\n]+)>|([^\s)]+))(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\)/g;
+  return Array.from(withoutCode.matchAll(pattern))
+    .map((m) => ({ alt: m[1], url: m[2] ?? m[3] }))
+    .filter((image) => /^(https?:|data:image\/)/i.test(image.url));
+}
+
+function imageFileName(image: MarkdownImage, mimeType: string) {
+  let segment = "";
+  if (!/^data:/i.test(image.url)) {
+    const last = new URL(image.url).pathname.split("/").pop() ?? "";
+    try {
+      segment = decodeURIComponent(last);
+    } catch (error) {
+      segment = last;
+    }
+  }
+  const ext =
+    segment.match(/\.(\w{1,5})$/)?.[1] ??
+    mimeType.match(/^image\/(\w+)/)?.[1]?.replace(/^jpeg$/, "jpg") ??
+    "png";
+  const base = (
+    image.alt.trim() ||
+    segment.replace(/\.\w{1,5}$/, "") ||
+    "image"
+  )
+    .replace(/[\\/:*?"<>|\x00-\x1f]/g, "_")
+    .slice(0, 100);
+  return base.toLowerCase().endsWith(`.${ext.toLowerCase()}`)
+    ? base
+    : `${base}.${ext}`;
+}
+
+// Without CORS headers the browser hides the 403 of an expired presigned URL,
+// so read the signing time and lifetime from the URL itself.
+function isPresignExpired(url: string) {
+  try {
+    const params = new URL(url).searchParams;
+    const date = params
+      .get("X-Amz-Date")
+      ?.match(/^(\d{4})(\d\d)(\d\d)T(\d\d)(\d\d)(\d\d)Z$/);
+    const seconds = Number(params.get("X-Amz-Expires"));
+    if (!date || !seconds) return false;
+    const [year, month, day, hour, minute, second] = date.slice(1).map(Number);
+    const signedAt = Date.UTC(year, month - 1, day, hour, minute, second);
+    return signedAt + seconds * 1000 < Date.now();
+  } catch (error) {
+    return false;
+  }
+}
+
+async function saveImage(image: MarkdownImage): Promise<ImageSaveResult> {
+  let blob: Blob;
+  try {
+    // no-store: the <img> may have cached a copy fetched without CORS headers
+    const response = await fetch(image.url, { cache: "no-store" });
+    if (response.status === 403) return "expired";
+    if (!response.ok) return "failed";
+    blob = await response.blob();
+  } catch (error) {
+    return isPresignExpired(image.url) ? "expired" : "blocked";
+  }
+
+  const name = imageFileName(image, blob.type);
+  try {
+    if (window.__TAURI__) {
+      const path = await window.__TAURI__.dialog.save({
+        defaultPath: name,
+        filters: [
+          {
+            name: `${name.split(".").pop()} files`,
+            extensions: [`${name.split(".").pop()}`],
+          },
+          {
+            name: "All Files",
+            extensions: ["*"],
+          },
+        ],
+      });
+      if (path === null) return "cancelled";
+      await window.__TAURI__.fs.writeBinaryFile(
+        path,
+        new Uint8Array(await blob.arrayBuffer()),
+      );
+      return "written";
+    }
+
+    const objectUrl = URL.createObjectURL(blob);
+    const element = document.createElement("a");
+    element.setAttribute("href", objectUrl);
+    element.setAttribute("download", name);
+    element.style.display = "none";
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    return "downloaded";
+  } catch (error) {
+    return "failed";
+  }
+}
+
+// One click lets the page open one popup, so each further tab opens from a
+// click on the toast.
+function openInNewTabs(
+  [image, ...rest]: MarkdownImage[],
+  notes = new Set<string>(),
+) {
+  if (!window.open(image.url, "_blank")) {
+    showToast(Array.from(notes.add(Locale.Download.Failed)).join(" "));
+    return;
+  }
+  showToast(
+    [Locale.Download.ImageOpened, ...Array.from(notes)].join(" "),
+    rest.length > 0
+      ? {
+          text: Locale.Download.OpenNextImage(rest.length),
+          onClick: () => openInNewTabs(rest),
+        }
+      : undefined,
+    rest.length > 0 ? 10000 : 3000,
+  );
+}
+
+export async function downloadImages(images: MarkdownImage[]) {
+  const blocked: MarkdownImage[] = [];
+  // Toasts all render in the same spot, so one toast reports every problem.
+  const notes = new Set<string>();
+  let written = false;
+  let cancelled = false;
+  for (const image of images) {
+    switch (await saveImage(image)) {
+      case "downloaded":
+        break;
+      case "written":
+        written = true;
+        break;
+      case "blocked":
+        blocked.push(image);
+        break;
+      case "expired":
+        notes.add(Locale.Download.ImageExpired);
+        break;
+      case "failed":
+        notes.add(Locale.Download.Failed);
+        break;
+      case "cancelled":
+        cancelled = true;
+        break;
+    }
+    if (cancelled) break;
+  }
+  if (blocked.length > 0) openInNewTabs(blocked, notes);
+  else if (notes.size > 0) showToast(Array.from(notes).join(" "));
+  else if (written && !cancelled) showToast(Locale.Download.Success);
+}
+
 export function compressImage(file: File, maxSize: number): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
