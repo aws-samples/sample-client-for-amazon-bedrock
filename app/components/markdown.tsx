@@ -118,11 +118,13 @@ function escapeDollarNumber(text: string) {
   return escapedText;
 }
 
+const MIN_IMAGE_SIZE_FOR_BUTTON = 48;
+
 function DownloadableImage({
   node,
   ...imgProps
 }: React.ComponentProps<"img"> & ExtraProps) {
-  const [settled, setSettled] = useState(false);
+  const [hasRoom, setHasRoom] = useState(false);
   const { src, alt = "" } = imgProps;
   if (typeof src !== "string" || !/^https?:/i.test(src)) {
     return <img {...imgProps} />;
@@ -131,11 +133,14 @@ function DownloadableImage({
     <span className="markdown-image">
       <img
         {...imgProps}
-        onLoad={() => setSettled(true)}
-        onError={() => setSettled(true)}
+        onLoad={(e) =>
+          setHasRoom(
+            e.currentTarget.width >= MIN_IMAGE_SIZE_FOR_BUTTON &&
+              e.currentTarget.height >= MIN_IMAGE_SIZE_FOR_BUTTON,
+          )
+        }
       />
-      {/* Until it loads the image has no box, so the button would sit on the text. */}
-      {settled && (
+      {hasRoom && (
         <button
           type="button"
           className="markdown-image-download"
