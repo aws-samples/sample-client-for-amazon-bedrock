@@ -46,6 +46,7 @@ const en: LocaleType = {
       Delete: "Delete",
       Edit: "Edit",
       Download: "Download",
+      DownloadImage: "Download this image",
     },
     Commands: {
       new: "Start a new chat",

@@ -1,4 +1,4 @@
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { type ExtraProps } from "react-markdown";
 import "katex/dist/katex.min.css";
 import RemarkMath from "remark-math";
 import RemarkBreaks from "remark-breaks";
@@ -6,10 +6,12 @@ import RehypeKatex from "rehype-katex";
 import RemarkGfm from "remark-gfm";
 import RehypeHighlight from "rehype-highlight";
 import { useRef, useState, RefObject, useEffect, useMemo } from "react";
-import { copyToClipboard } from "../utils";
+import { copyToClipboard, downloadImages } from "../utils";
 import mermaid from "mermaid";
 
 import LoadingIcon from "../icons/three-dots.svg";
+import DownloadIcon from "../icons/download.svg";
+import Locale from "../locales";
 import React from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { showImageModal } from "./ui-lib";
@@ -116,7 +118,46 @@ function escapeDollarNumber(text: string) {
   return escapedText;
 }
 
-function _MarkDownContent(props: { content: string }) {
+function DownloadableImage({
+  node,
+  ...imgProps
+}: React.ComponentProps<"img"> & ExtraProps) {
+  const [settled, setSettled] = useState(false);
+  const { src, alt = "" } = imgProps;
+  if (typeof src !== "string" || !/^https?:/i.test(src)) {
+    return <img {...imgProps} />;
+  }
+  return (
+    <span className="markdown-image">
+      <img
+        {...imgProps}
+        onLoad={() => setSettled(true)}
+        onError={() => setSettled(true)}
+      />
+      {/* Until it loads the image has no box, so the button would sit on the text. */}
+      {settled && (
+        <button
+          type="button"
+          className="markdown-image-download"
+          title={Locale.Chat.Actions.DownloadImage}
+          onClick={(e) => {
+            // stopPropagation alone does not stop a linked image's <a> from opening.
+            e.preventDefault();
+            e.stopPropagation();
+            downloadImages([{ alt, url: src }]);
+          }}
+        >
+          <DownloadIcon />
+        </button>
+      )}
+    </span>
+  );
+}
+
+function _MarkDownContent(props: {
+  content: string;
+  showImageDownload?: boolean;
+}) {
   const escapedContent = useMemo(
     () => escapeDollarNumber(props.content),
     [props.content],
@@ -143,6 +184,7 @@ function _MarkDownContent(props: { content: string }) {
           const target = isInternal ? "_self" : aProps.target ?? "_blank";
           return <a {...aProps} target={target} />;
         },
+        ...(props.showImageDownload && { img: DownloadableImage }),
       }}
     >
       {escapedContent}
@@ -159,6 +201,7 @@ export function Markdown(
     fontSize?: number;
     parentRef?: RefObject<HTMLDivElement | null>;
     defaultShow?: boolean;
+    showImageDownload?: boolean;
   } & React.DOMAttributes<HTMLDivElement>,
 ) {
   const mdRef = useRef<HTMLDivElement>(null);
@@ -177,7 +220,10 @@ export function Markdown(
       {props.loading ? (
         <LoadingIcon />
       ) : (
-        <MarkdownContent content={props.content} />
+        <MarkdownContent
+          content={props.content}
+          showImageDownload={props.showImageDownload}
+        />
       )}
     </div>
   );

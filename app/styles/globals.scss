@@ -299,6 +299,45 @@ pre {
   }
 }
 
+.markdown-image {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+
+  &:hover .markdown-image-download {
+    pointer-events: all;
+    opacity: 0.8;
+  }
+
+  .markdown-image-download {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: flex;
+    padding: 4px;
+    border: none;
+    border-radius: 6px;
+    // It sits on the image, whose colours ignore the theme.
+    background-color: rgba(255, 255, 255, 0.8);
+    box-shadow: var(--card-shadow);
+    cursor: pointer;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity ease 0.3s;
+
+    @media (hover: none) {
+      pointer-events: all;
+      opacity: 0.8;
+    }
+
+    &:hover,
+    &:focus-visible {
+      pointer-events: all;
+      opacity: 1;
+    }
+  }
+}
+
 .clickable {
   cursor: pointer;
 

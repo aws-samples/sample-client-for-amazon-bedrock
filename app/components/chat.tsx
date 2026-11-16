@@ -1687,6 +1687,7 @@ function _Chat() {
                         message.content.length === 0 &&
                         !isUser
                       }
+                      showImageDownload={showActions && !message.streaming}
                       onContextMenu={(e) => onRightClick(e, message)}
                       onDoubleClickCapture={() => {
                         if (!isMobileScreen) return;

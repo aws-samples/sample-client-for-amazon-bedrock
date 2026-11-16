@@ -43,6 +43,7 @@ const cn = {
       Delete: "删除",
       Edit: "编辑",
       Download: "下载",
+      DownloadImage: "下载这张图",
     },
     Commands: {
       new: "新建聊天",
