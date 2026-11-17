@@ -45,6 +45,8 @@ const en: LocaleType = {
       PinToastAction: "View",
       Delete: "Delete",
       Edit: "Edit",
+      Download: "Download",
+      DownloadImage: "Download this image",
     },
     Commands: {
       new: "Start a new chat",
@@ -440,6 +442,10 @@ const en: LocaleType = {
   Download: {
     Success: "Content downloaded to your directory.",
     Failed: "Download failed.",
+    ImageOpened: "Couldn't save an image directly, so it opened in a new tab.",
+    ImageExpired:
+      "An image link has expired. Regenerate the image to download it.",
+    OpenNextImage: (count: number) => `Open next (${count} left)`,
   },
   Context: {
     Toast: (x: any) => `With ${x} contextual prompts`,
